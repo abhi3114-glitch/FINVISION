@@ -10,11 +10,11 @@ export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [user, setUser] = useState(null); // ✅ safer for hydration
+  const [user, setUser] = useState(null);
   const [filter, setFilter] = useState("All");
   const [range, setRange] = useState("This Month");
   const [customRange, setCustomRange] = useState({ start: "", end: "" });
-  const [mounted, setMounted] = useState(false); // ✅ prevents hydration mismatch
+  const [mounted, setMounted] = useState(false);
 
   const categories = [
     "All",
@@ -25,6 +25,7 @@ export default function Transactions() {
     "Entertainment",
     "Subscriptions",
     "Gadgets",
+    "Salary",
     "Others",
   ];
 
@@ -61,13 +62,11 @@ export default function Transactions() {
   async function loadTransactions() {
     try {
       setLoading(true);
-
       const dateRange = getDateRange();
       const params = {
         ...(filter !== "All" ? { category: filter } : {}),
         ...(dateRange.start ? { start: dateRange.start, end: dateRange.end } : {}),
       };
-
       const data = await API.get("/api/transactions", params);
       setTransactions(data);
     } catch (err) {
@@ -78,7 +77,20 @@ export default function Transactions() {
     }
   }
 
-  // 🔑 Validate and load user
+  // 🗑️ Delete Transaction
+  async function handleDelete(id) {
+    if (!window.confirm("Are you sure you want to delete this transaction?")) return;
+    try {
+      await API.delete(`/api/transactions/${id}`);
+      setTransactions((prev) => prev.filter((t) => t.id !== id));
+      toast.success("🗑️ Transaction deleted");
+    } catch (err) {
+      console.error("Delete failed:", err);
+      toast.error("Failed to delete transaction");
+    }
+  }
+
+  // 🔑 Initialize
   async function initUserAndData() {
     const storedUser = API.getUser();
     if (storedUser) {
@@ -125,7 +137,7 @@ export default function Transactions() {
 
       <main className="ml-72 flex-1 p-10 relative">
         <Header
-          subtitle="View and manage all your expenses by time and category"
+          subtitle="View and manage all your expenses and income by time and category"
           user={user}
           onLogout={() => {
             API.logout();
@@ -205,7 +217,9 @@ export default function Transactions() {
                   <th className="pb-3">Date</th>
                   <th className="pb-3">Name</th>
                   <th className="pb-3">Category</th>
+                  <th className="pb-3">Type</th>
                   <th className="pb-3 text-right">Amount (₹)</th>
+                  <th className="pb-3 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -237,8 +251,33 @@ export default function Transactions() {
                         {t.category || "Others"}
                       </span>
                     </td>
-                    <td className="text-right text-cyan-400 font-semibold">
+                    <td>
+                      <span
+                        className={`px-3 py-1 text-xs rounded-full font-medium ${
+                          t.type === "income"
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-red-500/20 text-red-400"
+                        }`}
+                      >
+                        {t.type === "income" ? "Income" : "Expense"}
+                      </span>
+                    </td>
+                    <td
+                      className={`text-right font-semibold ${
+                        t.type === "income"
+                          ? "text-green-400"
+                          : "text-red-400"
+                      }`}
+                    >
                       ₹{parseFloat(t.amount).toFixed(2)}
+                    </td>
+                    <td className="text-center">
+                      <button
+                        onClick={() => handleDelete(t.id)}
+                        className="text-red-500 hover:text-red-700 transition"
+                      >
+                        🗑️
+                      </button>
                     </td>
                   </tr>
                 ))}

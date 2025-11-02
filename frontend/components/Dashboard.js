@@ -298,7 +298,19 @@ export default function Dashboard() {
         }
       `}>
         <Sidebar 
-          onMobileClose={() => setIsSidebarOpen(false)}
+          onMobileClose={() => {
+            console.log('🔄 Dashboard: onMobileClose called, current state:', isSidebarOpen);
+            // Use functional update to ensure state change
+            setIsSidebarOpen(prev => {
+              console.log('🔄 Dashboard: setIsSidebarOpen called, prev:', prev);
+              if (prev) {
+                console.log('✅ Dashboard: Setting sidebar to closed');
+                return false;
+              }
+              console.log('⚠️ Dashboard: Sidebar already closed');
+              return prev;
+            });
+          }}
           isOpen={isSidebarOpen}
         />
       </div>

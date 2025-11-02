@@ -73,7 +73,12 @@ export default function Settings() {
         }
       `}>
         <Sidebar 
-          onMobileClose={() => setIsSidebarOpen(false)}
+          onMobileClose={() => {
+            setIsSidebarOpen(prev => {
+              if (prev) return false;
+              return prev;
+            });
+          }}
           isOpen={isSidebarOpen}
         />
       </div>

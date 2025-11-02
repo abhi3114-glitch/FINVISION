@@ -42,6 +42,7 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
 
   // 📱 Simple and reliable close handler for mobile Chrome
   const handleClose = (e) => {
+    console.log('🔄 Close button clicked!');
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -50,21 +51,42 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
       }
     }
     
-    // Direct call - immediate execution
-    if (onMobileClose && typeof onMobileClose === 'function') {
-      onMobileClose();
+    // IMMEDIATE execution - no delays, no wrappers
+    if (onMobileClose) {
+      console.log('🔄 Calling onMobileClose function');
+      // Call directly - this should work immediately
+      try {
+        onMobileClose();
+        console.log('✅ onMobileClose called successfully');
+      } catch (err) {
+        console.error('❌ Error closing sidebar:', err);
+      }
+    } else {
+      console.error('❌ onMobileClose is not available!');
     }
   };
 
-  // Touch handler specifically for mobile Chrome
+  // Touch handler specifically for mobile Chrome - use onTouchEnd for reliability
   const handleTouch = (e) => {
+    console.log('📱 Touch end event fired!');
+    // Prevent all default behaviors
     e.preventDefault();
     e.stopPropagation();
     if (e.nativeEvent) {
       e.nativeEvent.stopImmediatePropagation();
     }
-    if (onMobileClose && typeof onMobileClose === 'function') {
-      onMobileClose();
+    
+    // IMMEDIATE call
+    if (onMobileClose) {
+      console.log('📱 Calling onMobileClose from touch handler');
+      try {
+        onMobileClose();
+        console.log('✅ onMobileClose called successfully from touch');
+      } catch (err) {
+        console.error('❌ Error closing sidebar from touch:', err);
+      }
+    } else {
+      console.error('❌ onMobileClose is not available in touch handler!');
     }
   };
 
@@ -103,7 +125,14 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
             ref={closeButtonRef}
             onClick={handleClose}
             onTouchEnd={handleTouch}
-            onTouchStart={(e) => e.stopPropagation()}
+            onTouchStart={(e) => {
+              // Don't prevent default on touchStart - only stop propagation
+              e.stopPropagation();
+            }}
+            onTouchCancel={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
             className="lg:hidden bg-red-500 hover:bg-red-600 active:bg-red-700 p-4 rounded-lg border-2 border-red-300 transition-all touch-manipulation ml-2 flex-shrink-0 min-w-[48px] min-h-[48px] flex items-center justify-center"
             style={{ 
               WebkitTapHighlightColor: 'transparent',

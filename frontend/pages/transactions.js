@@ -181,7 +181,12 @@ export default function Transactions() {
         }
       `}>
         <Sidebar 
-          onMobileClose={() => setIsSidebarOpen(false)}
+          onMobileClose={() => {
+            setIsSidebarOpen(prev => {
+              if (prev) return false;
+              return prev;
+            });
+          }}
           isOpen={isSidebarOpen}
         />
       </div>

@@ -259,7 +259,8 @@ export default function Transactions() {
                         t.type === "income" ? "text-green-400" : "text-red-400"
                       }`}
                     >
-                      ₹{parseFloat(t.amount).toFixed(2)}
+                      ₹{Number.isFinite(parseFloat(t.amount)) ? parseFloat(t.amount).toFixed(2) : "0.00"}
+
                     </td>
                     <td className="text-center">
                       <button

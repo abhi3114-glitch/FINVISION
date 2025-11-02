@@ -5,6 +5,7 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from extensions import db, jwt, oauth  # ✅ shared singletons imported here
 from config import Config
+import os
 
 migrate = Migrate()
 
@@ -53,10 +54,10 @@ def create_app():
 
     return app
 
+# ✅ Create app instance for Gunicorn
+app = create_app()
 
 if __name__ == "__main__":
-    app = create_app()
-
-    # ✅ Debug mode for development
-    # Set host=0.0.0.0 if you plan to test on mobile via LAN
-    app.run(debug=True, host="127.0.0.1", port=5000)
+    # ✅ Use Render’s assigned port, fallback to 5000 locally
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)

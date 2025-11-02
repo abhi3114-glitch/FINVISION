@@ -1,3 +1,4 @@
+// dashboard.js
 import { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
@@ -10,53 +11,37 @@ import { API } from "../lib/api";
 import toast from "react-hot-toast";
 
 export default function Dashboard() {
-  const [summary, setSummary] = useState(null);
+  // ------- Core UI state -------
+  const [summary, setSummary] = useState({
+    total_income: 0,
+    total_expense: 0,
+    free_cash: 0,
+    saving_percent: 0,
+  });
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [user, setUser] = useState(null);
   const [mounted, setMounted] = useState(false);
 
-  // 🧠 AI Insight States
+  // ------- AI insight state -------
   const [aiInsights, setAiInsights] = useState({
-    advice: "Analyzing your data...",
+    advice: "Analyzing your finances...",
     free_cash: 0,
     savings_rate: 0,
   });
   const [aiLoading, setAiLoading] = useState(false);
 
-  // 🗂️ Filter States
+  // ------- Filters -------
   const [category, setCategory] = useState("All");
   const [timeRange, setTimeRange] = useState("this_month");
   const [customRange, setCustomRange] = useState({ start: "", end: "" });
 
-  // Animation variants
-  const container = {
-    hidden: {},
-    show: { transition: { staggerChildren: 0.12 } },
-  };
-  const itemUp = {
-    hidden: { opacity: 0, y: 18 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-  };
+  // ------- Animations -------
+  const container = { hidden: {}, show: { transition: { staggerChildren: 0.12 } } };
+  const itemUp = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, transition: { duration: 0.6 } } };
 
-  // 🔁 Refresh user info
-  async function refreshUser() {
-    const token = API.getToken();
-    if (!token) return;
-    try {
-      const res = await API.get("/api/user/me");
-      if (res && res.email) {
-        API.saveSession({ access_token: token, user: res });
-        setUser(res);
-      }
-    } catch {
-      toast.error("Session expired. Please log in again.");
-      API.logout();
-    }
-  }
-
-  // 🧮 Utility to get date range based on selection
+  // ------- Helpers -------
   function getDateParams() {
     const today = new Date();
     let start = "", end = "";
@@ -64,8 +49,8 @@ export default function Dashboard() {
       start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0];
       end = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split("T")[0];
     } else if (timeRange === "last_month") {
-      const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      start = lastMonth.toISOString().split("T")[0];
+      const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      start = lastMonthStart.toISOString().split("T")[0];
       end = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split("T")[0];
     } else if (timeRange === "this_year") {
       start = new Date(today.getFullYear(), 0, 1).toISOString().split("T")[0];
@@ -77,7 +62,51 @@ export default function Dashboard() {
     return { start, end };
   }
 
-  // 🔄 Load dashboard data with filters
+  // refreshUser: checks token & fetches latest user info
+  async function refreshUser() {
+    const token = API.getToken();
+    if (!token) return;
+    try {
+      const res = await API.get("/api/user/me");
+      if (res && res.email) {
+        API.saveSession({ access_token: token, user: res });
+        setUser(res);
+      }
+    } catch (err) {
+      console.warn("Session refresh failed:", err);
+      toast.error("Session expired. Please log in again.");
+      API.logout();
+      setUser(null);
+    }
+  }
+
+  // Load AI insights (filtered)
+  async function loadAiInsights(start, end, categoryParam) {
+    try {
+      setAiLoading(true);
+      const params = new URLSearchParams();
+      if (categoryParam && categoryParam !== "All") params.append("category", categoryParam);
+      if (start) params.append("start", start);
+      if (end) params.append("end", end);
+      const query = params.toString() ? `?${params.toString()}` : "";
+
+      const res = await API.get(`/api/ai/dashboard_insights${query}`);
+      if (res) {
+        setAiInsights({
+          advice: res.advice || "Spend smart, save better 💡",
+          free_cash: res.free_cash ?? 0,
+          savings_rate: res.savings_rate ?? 0,
+        });
+      }
+    } catch (err) {
+      console.error("AI insights error:", err);
+      toast.error("AI insights unavailable");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  // Load summary & transactions (tries dashboard summary endpoint first, fallback to /api/summary)
   async function loadData() {
     try {
       setLoading(true);
@@ -86,49 +115,70 @@ export default function Dashboard() {
       if (category && category !== "All") params.append("category", category);
       if (start) params.append("start", start);
       if (end) params.append("end", end);
-
       const query = params.toString() ? `?${params.toString()}` : "";
-      const [sum, tx] = await Promise.all([
-        API.get(`/api/summary${query}`),
-        API.get(`/api/transactions${query}`),
-      ]);
-      setSummary(sum);
-      setTransactions(tx);
+
+      // Try dashboard summary endpoint that requires user id if available
+      let sumRes = null;
+      try {
+        if (user && user.id) {
+          // prefer the richer dashboard summary (has total_income/total_expense/free_cash/saving_percent)
+          sumRes = await API.get(`/api/dashboard/summary/${user.id}${query}`);
+        }
+      } catch (err) {
+        // ignore, will fallback
+        sumRes = null;
+      }
+
+      // fallback to generic /api/summary (returns total)
+      if (!sumRes) {
+        try {
+          const s = await API.get(`/api/summary${query}`);
+          // convert to unified shape if necessary
+          if (s && (s.total !== undefined || s.total !== null)) {
+            sumRes = {
+              total_income: (s.total_income ?? 0),
+              total_expense: (s.total_expense ?? 0),
+              free_cash: s.total ?? 0, // if only total provided, treat as free_cash fallback
+              saving_percent: (s.saving_percent ?? 0),
+            };
+          } else {
+            sumRes = {
+              total_income: s?.total_income ?? 0,
+              total_expense: s?.total_expense ?? 0,
+              free_cash: s?.free_cash ?? 0,
+              saving_percent: s?.saving_percent ?? 0,
+            };
+          }
+        } catch (err) {
+          console.warn("Summary fallback failed:", err);
+          sumRes = {
+            total_income: 0,
+            total_expense: 0,
+            free_cash: 0,
+            saving_percent: 0,
+          };
+        }
+      }
+
+      // Transactions list (filtered)
+      const txRes = await API.get(`/api/transactions${query}`);
+      setSummary({
+        total_income: sumRes.total_income ?? 0,
+        total_expense: sumRes.total_expense ?? 0,
+        free_cash: sumRes.free_cash ?? 0,
+        saving_percent: sumRes.saving_percent ?? 0,
+      });
+      setTransactions(Array.isArray(txRes) ? txRes : []);
       await loadAiInsights(start, end, category);
     } catch (err) {
-      console.error("API Error:", err);
-      toast.error("Failed to load dashboard data.");
+      console.error("Dashboard load failed:", err);
+      toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
   }
 
-  // 🧠 Load AI Insights with filters
-  async function loadAiInsights(start, end, category) {
-    try {
-      setAiLoading(true);
-      const params = new URLSearchParams();
-      if (category && category !== "All") params.append("category", category);
-      if (start) params.append("start", start);
-      if (end) params.append("end", end);
-
-      const query = params.toString() ? `?${params.toString()}` : "";
-      const res = await API.get(`/api/ai/dashboard_insights${query}`);
-      if (res) {
-        setAiInsights({
-          advice: res.advice || "Spend smart and save wisely 💡",
-          free_cash: res.free_cash || 0,
-          savings_rate: res.savings_rate || 0,
-        });
-      }
-    } catch {
-      toast.error("AI insights unavailable right now.");
-    } finally {
-      setAiLoading(false);
-    }
-  }
-
-  // 🧭 Initial load
+  // Initial mount: set mounted, load session/user and data
   useEffect(() => {
     setMounted(true);
     async function init() {
@@ -142,11 +192,13 @@ export default function Dashboard() {
       }
     }
     init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 🔁 Reload on filter change
+  // reload when filters change
   useEffect(() => {
     if (user && mounted) loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, timeRange, customRange]);
 
   if (!mounted) return null;
@@ -154,12 +206,8 @@ export default function Dashboard() {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center h-screen text-center space-y-6">
-        <h1 className="text-3xl font-semibold text-cyan-400">
-          Welcome to FinVision 💰
-        </h1>
-        <p className="text-gray-400 text-sm">
-          Login with Google to access your personalized AI-powered dashboard.
-        </p>
+        <h1 className="text-3xl font-semibold text-cyan-400">Welcome to FinVision 💰</h1>
+        <p className="text-gray-400 text-sm">Login to view your AI-powered finance dashboard.</p>
         <button
           onClick={() => API.loginWithGoogle()}
           className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold py-2 px-6 rounded-full transition-all hover:scale-105 shadow-lg"
@@ -178,23 +226,28 @@ export default function Dashboard() {
     );
   }
 
-  // ✅ Main Dashboard
+  // compute top expense (safely)
+  const topExpense = transactions
+    .filter((t) => (t.type ?? "expense") === "expense")
+    .sort((a, b) => parseFloat(b.amount || 0) - parseFloat(a.amount || 0))[0];
+
+  // ---------- Render ----------
   return (
     <div className="flex w-full">
       <Sidebar />
 
       <main className="ml-72 flex-1 p-10 relative">
-        {/* Top Header */}
         <Header
-          subtitle="Overview of your spending, goals, and forecasts"
+          subtitle="AI-driven overview of your spending, income, and savings"
           user={user}
           onLogout={() => {
             API.logout();
             toast.success("Logged out successfully!");
+            setUser(null);
           }}
         />
 
-        {/* 🔍 Filters */}
+        {/* Filters */}
         <div className="flex items-center gap-4 mb-6">
           <select
             value={category}
@@ -207,7 +260,8 @@ export default function Dashboard() {
             <option>Shopping</option>
             <option>Bills</option>
             <option>Entertainment</option>
-            <option>Other</option>
+            <option>Salary</option>
+            <option>Others</option>
           </select>
 
           <select
@@ -226,91 +280,88 @@ export default function Dashboard() {
               <input
                 type="date"
                 value={customRange.start}
-                onChange={(e) =>
-                  setCustomRange((r) => ({ ...r, start: e.target.value }))
-                }
+                onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
                 className="bg-gray-800 text-gray-200 px-2 py-1 rounded-md border border-gray-700"
               />
               <span>to</span>
               <input
                 type="date"
                 value={customRange.end}
-                onChange={(e) =>
-                  setCustomRange((r) => ({ ...r, end: e.target.value }))
-                }
+                onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
                 className="bg-gray-800 text-gray-200 px-2 py-1 rounded-md border border-gray-700"
               />
             </div>
           )}
         </div>
 
-        {/* Dashboard Content */}
-        <motion.div variants={container} initial="hidden" animate="show">
-          {/* Summary Cards */}
-          <motion.div variants={itemUp} className="grid grid-cols-3 gap-6 mb-8">
-            <Card title="Total Spent" value={`₹ ${summary?.total?.toLocaleString() || 0}`} />
-            <Card title="Transactions" value={transactions.length.toString()} />
-            <Card
-              title="Free Cash"
-              value={
-                aiLoading
-                  ? "Calculating..."
-                  : `₹ ${aiInsights.free_cash.toLocaleString()}`
-              }
-            />
-          </motion.div>
-
-          {/* Charts */}
-          <div className="grid grid-cols-3 gap-6">
-            <motion.div variants={itemUp} className="col-span-2 card-glow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Spending Trend</h3>
-              </div>
-              <TrendChart transactions={transactions} />
-            </motion.div>
-
-            <motion.div variants={itemUp} className="card-glow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Category Breakdown</h3>
-              </div>
-              <DonutChart transactions={transactions} />
-            </motion.div>
-          </div>
-
-          {/* Insights */}
-          <div className="grid grid-cols-3 gap-6 mt-6">
-            <motion.div variants={itemUp} className="card-glow p-6">
-              <h4 className="font-semibold mb-2">Top Expense</h4>
-              <div className="text-sm text-gray-300">
-                {transactions[0]
-                  ? `${transactions[0].name} • ₹${transactions[0].amount}`
-                  : "No data"}
-              </div>
-            </motion.div>
-
-            <motion.div variants={itemUp} className="card-glow p-6">
-              <h4 className="font-semibold mb-2">Savings Rate</h4>
-              <div className="text-sm text-yellow-400 font-medium">
-                {aiLoading
-                  ? "Predicting..."
-                  : `${aiInsights.savings_rate}% / month`}
-              </div>
-            </motion.div>
-
-            <motion.div variants={itemUp} className="card-glow p-6">
-              <h4 className="font-semibold mb-2">AI Advice</h4>
-              <div
-                className={`text-sm ${
-                  aiLoading ? "text-gray-400 italic" : "text-blue-400"
-                }`}
-              >
-                {aiLoading ? "Thinking..." : aiInsights.advice}
-              </div>
-            </motion.div>
-          </div>
+        {/* Summary Cards */}
+        <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-4 gap-6 mb-8">
+          <Card title="Total Income" value={`₹ ${Number(summary.total_income || 0).toLocaleString()}`} color="text-green-400" />
+          <Card title="Total Expense" value={`₹ ${Number(summary.total_expense || 0).toLocaleString()}`} color="text-red-400" />
+          <Card title="Free Cash" value={`₹ ${Number(summary.free_cash || 0).toLocaleString()}`} color="text-blue-400" />
+          <Card title="Saving Rate" value={`${Number(summary.saving_percent || 0)}%`} color="text-yellow-400" />
         </motion.div>
 
-        {/* ➕ Add Transaction */}
+        {/* Charts */}
+        <div className="grid grid-cols-3 gap-6">
+          <motion.div variants={itemUp} className="col-span-2 card-glow p-6">
+            <h3 className="text-lg font-semibold mb-4">Spending Trend</h3>
+            <TrendChart transactions={transactions} />
+          </motion.div>
+
+          <motion.div variants={itemUp} className="card-glow p-6">
+            <h3 className="text-lg font-semibold mb-4">Category Breakdown</h3>
+            <DonutChart transactions={transactions} />
+          </motion.div>
+        </div>
+
+        {/* Insights (AI + Top Expense) */}
+        <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-3 gap-6 mt-8">
+          <motion.div variants={itemUp} className="card-glow p-6">
+            <h4 className="font-semibold mb-2">AI Financial Advice</h4>
+            <p className={`text-sm ${aiLoading ? "text-gray-400 italic" : "text-cyan-400"}`}>
+              {aiLoading ? "Analyzing..." : aiInsights.advice}
+            </p>
+          </motion.div>
+
+          <motion.div variants={itemUp} className="card-glow p-6">
+            <h4 className="font-semibold mb-2">AI Free Cash Prediction</h4>
+            <p className="text-blue-400 text-lg font-semibold">
+              {aiLoading ? "..." : `₹ ${Number(aiInsights.free_cash || 0).toLocaleString()}`}
+            </p>
+          </motion.div>
+
+          <motion.div variants={itemUp} className="card-glow p-6">
+            <h4 className="font-semibold mb-2">AI Saving Efficiency</h4>
+            <p className="text-yellow-400 text-lg font-semibold">
+              {aiLoading ? "..." : `${Number(aiInsights.savings_rate || 0)}%`}
+            </p>
+          </motion.div>
+        </motion.div>
+
+        {/* Additional Insights row */}
+        <div className="grid grid-cols-3 gap-6 mt-6">
+          <motion.div variants={itemUp} className="card-glow p-6">
+            <h4 className="font-semibold mb-2">Top Expense</h4>
+            <div className="text-sm text-gray-300">
+              {topExpense ? `${topExpense.name} • ₹${Number(topExpense.amount || 0).toLocaleString()}` : "No data"}
+            </div>
+          </motion.div>
+
+          <motion.div variants={itemUp} className="card-glow p-6">
+            <h4 className="font-semibold mb-2">Transactions</h4>
+            <div className="text-sm text-gray-300">{transactions.length} transactions</div>
+          </motion.div>
+
+          <motion.div variants={itemUp} className="card-glow p-6">
+            <h4 className="font-semibold mb-2">Quick Tip</h4>
+            <div className="text-sm text-gray-300">
+              {aiLoading ? "Loading tip..." : (aiInsights.advice || "Track small spends to save big.")}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Add Transaction FAB */}
         <button
           onClick={() => setShowModal(true)}
           className="fixed bottom-10 right-10 bg-cyan-500 hover:bg-cyan-600 text-black font-bold rounded-full w-14 h-14 text-3xl shadow-lg transition-all hover:scale-110"

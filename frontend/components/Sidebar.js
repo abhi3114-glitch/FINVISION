@@ -39,19 +39,41 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
     }
   };
 
-  // 📱 Handle close button click - FIXED VERSION
+  // 📱 Handle close button click - Mobile Chrome Fixed
   const handleClose = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      // Prevent any parent handlers
+      if (e.nativeEvent) {
+        e.nativeEvent.stopImmediatePropagation();
+      }
+    }
+    
+    // Ensure we close the sidebar on mobile - use setTimeout for mobile Chrome compatibility
+    if (onMobileClose && typeof onMobileClose === 'function') {
+      // Small delay ensures touch event is fully processed
+      setTimeout(() => {
+        onMobileClose();
+      }, 10);
+    }
+  };
+
+  // Additional touch handler for mobile Chrome compatibility
+  const handleTouchStart = (e) => {
+    // Don't preventDefault here - let the browser handle the touch
+    e.stopPropagation();
+  };
+
+  const handleTouchEnd = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("🔄 CLOSE BUTTON CLICKED - Sidebar.js");
-    console.log("onMobileClose function:", onMobileClose);
-    console.log("typeof onMobileClose:", typeof onMobileClose);
-    
+    if (e.nativeEvent) {
+      e.nativeEvent.stopImmediatePropagation();
+    }
+    // Direct call for immediate response
     if (onMobileClose && typeof onMobileClose === 'function') {
-      console.log("✅ Calling onMobileClose()");
       onMobileClose();
-    } else {
-      console.log("❌ onMobileClose is not a function or is undefined");
     }
   };
 
@@ -67,13 +89,16 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
   return (
     <>
       {/* 📱🖥️ Sidebar Container - Responsive for mobile and desktop */}
-      <aside className={`
-        w-72 lg:w-72 h-screen fixed left-0 top-0 flex flex-col p-4 lg:p-6 border-r border-white/10 z-[999] 
-        bg-[#0b0f1a]/95 backdrop-blur-md overflow-y-auto
-        lg:relative lg:z-auto
-      `}>
+      <aside 
+        className={`
+          w-72 lg:w-72 h-screen fixed left-0 top-0 flex flex-col p-4 lg:p-6 border-r border-white/10 z-[999] 
+          bg-[#0b0f1a]/95 backdrop-blur-md overflow-y-auto
+          lg:relative lg:z-auto
+        `}
+        style={{ pointerEvents: 'auto' }}
+      >
         {/* 📱 Mobile Header with Close Button */}
-        <div className="flex items-center justify-between mb-6 lg:mb-8">
+        <div className="flex items-center justify-between mb-6 lg:mb-8 relative" style={{ pointerEvents: 'auto' }}>
           <div className="flex-1">
             <div className="text-2xl lg:text-3xl font-semibold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 text-transparent bg-clip-text">
               FinVision
@@ -84,13 +109,29 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
           {/* 📱 Mobile Close Button - Only visible on mobile */}
           <button
             onClick={handleClose}
-            onTouchEnd={handleClose} // Added touch support for mobile
-            className="lg:hidden bg-red-500 hover:bg-red-600 active:bg-red-700 p-2 rounded-md border border-red-300 transition-colors z-[9999] relative touch-manipulation ml-2"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              handleClose(e);
+            }}
+            className="lg:hidden bg-red-500 hover:bg-red-600 active:bg-red-700 p-3.5 rounded-lg border-2 border-red-300 transition-all z-[10000] relative touch-manipulation ml-2 flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            style={{ 
+              WebkitTapHighlightColor: 'transparent',
+              WebkitTouchCallout: 'none',
+              touchAction: 'manipulation',
+              cursor: 'pointer',
+              userSelect: 'none',
+              pointerEvents: 'auto',
+              position: 'relative',
+              zIndex: 10000,
+              msTouchAction: 'manipulation'
+            }}
             aria-label="Close menu"
             type="button"
           >
-            <svg className="w-5 h-5 text-white pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg className="w-6 h-6 text-white pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>

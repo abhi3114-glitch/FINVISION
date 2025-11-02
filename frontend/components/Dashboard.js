@@ -269,13 +269,13 @@ export default function Dashboard() {
       )}
       
       {/* ✅ Sidebar with mobile responsiveness */}
-      {/* ✅ USE THIS INSTEAD */}
-      {isSidebarOpen && (
-       <Sidebar
-        isOpen={isSidebarOpen}
-        onMobileClose={() => setIsSidebarOpen(false)}
-       />
-      )}
+      <div className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0 transition-transform duration-300 ease-in-out
+      `}>
+        <Sidebar onMobileClose={() => setIsSidebarOpen(false)} />
+      </div>
 
       {/* ✅ Main Content Area */}
       <div className="flex-1">

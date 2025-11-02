@@ -15,7 +15,7 @@ export default function Transactions() {
   const [range, setRange] = useState("This Month");
   const [customRange, setCustomRange] = useState({ start: "", end: "" });
   const [mounted, setMounted] = useState(false);
-  const [deleteId, setDeleteId] = useState(null); // ✅ For delete confirmation modal
+  const [deleteId, setDeleteId] = useState(null);
 
   const categories = [
     "All",
@@ -31,6 +31,13 @@ export default function Transactions() {
   ];
 
   const ranges = ["This Month", "Last Month", "This Year", "Custom Range"];
+
+  // Safe amount formatter
+  const formatAmount = (amount) => {
+    if (!amount && amount !== 0) return '0.00';
+    const num = parseFloat(amount);
+    return isNaN(num) ? '0.00' : num.toFixed(2);
+  };
 
   // 📅 Calculate start/end date for selected range
   function getDateRange() {
@@ -59,7 +66,7 @@ export default function Transactions() {
     };
   }
 
-  // 🔄 Load transactions with filters
+  // 🔄 Load transactions with filters - SAFE VERSION
   async function loadTransactions() {
     try {
       setLoading(true);
@@ -69,10 +76,14 @@ export default function Transactions() {
         ...(start ? { start, end } : {}),
       };
       const data = await API.get("/api/transactions", params);
-      setTransactions(data);
+      
+      // Safe data processing
+      const safeData = Array.isArray(data) ? data : [];
+      setTransactions(safeData);
     } catch (err) {
       console.error("Transaction load error:", err);
       toast.error("Failed to fetch transactions");
+      setTransactions([]);
     } finally {
       setLoading(false);
     }
@@ -221,9 +232,9 @@ export default function Transactions() {
                     className="border-b border-gray-800 hover:bg-[#101426] transition-all"
                   >
                     <td className="py-3 text-gray-300">
-                      {new Date(t.date).toLocaleDateString()}
+                      {t.date ? new Date(t.date).toLocaleDateString() : 'Invalid Date'}
                     </td>
-                    <td className="text-gray-200">{t.name}</td>
+                    <td className="text-gray-200">{t.name || 'Unnamed'}</td>
                     <td>
                       <span
                         className={`text-xs font-medium px-3 py-1 rounded-full ${
@@ -259,8 +270,7 @@ export default function Transactions() {
                         t.type === "income" ? "text-green-400" : "text-red-400"
                       }`}
                     >
-                      ₹{Number.isFinite(parseFloat(t.amount)) ? parseFloat(t.amount).toFixed(2) : "0.00"}
-
+                      ₹{formatAmount(t.amount)} {/* ✅ SAFE: Using the formatter function */}
                     </td>
                     <td className="text-center">
                       <button

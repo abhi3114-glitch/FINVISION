@@ -20,10 +20,10 @@ export default function Header({ subtitle, user, onMenuToggle, onMenuClick, onLo
     <div className="flex items-center justify-between mb-6 px-2 lg:px-0">
       {/* Left Section - Title & Menu Toggle Button */}
       <div className="flex items-center gap-4">
-        {/* 📱🖥️ Menu Toggle Button - Works on both mobile and desktop */}
+        {/* 🖥️ Menu Toggle Button - Desktop only (no sidebar on mobile) */}
         <button
           onClick={handleMenuToggle}
-          className="bg-gray-800 hover:bg-gray-700 active:bg-gray-600 p-2 rounded-md border border-gray-700 transition-colors touch-manipulation"
+          className="hidden lg:flex bg-gray-800 hover:bg-gray-700 active:bg-gray-600 p-2 rounded-md border border-gray-700 transition-colors touch-manipulation"
           aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
           aria-expanded={isSidebarOpen}
         >

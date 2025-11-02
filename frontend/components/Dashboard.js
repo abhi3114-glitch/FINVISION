@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import MobileNav from "./MobileNav";
 import Card from "./Card";
 import TrendChart from "./charts/TrendChart";
 import DonutChart from "./charts/DonutChart";
@@ -288,66 +289,14 @@ export default function Dashboard() {
         />
       )}
       
-      {/* ✅ Sidebar with mobile and desktop responsiveness */}
+      {/* ✅ Sidebar - Desktop only (hidden on mobile) */}
       <div 
         id="sidebar-wrapper"
-        className={`
-          fixed lg:static inset-y-0 left-0 z-[1001]
-          transform transition-all duration-300 ease-in-out
-          ${isSidebarOpen 
-            ? 'translate-x-0 lg:translate-x-0 lg:w-72' 
-            : '-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden'
-          }
-        `}
-        ref={(el) => {
-          // Store ref for direct manipulation
-          if (el && !isSidebarOpen && window.innerWidth < 1024) {
-            // On mobile, if state says closed, ensure DOM matches
-            el.style.setProperty('transform', 'translateX(-100%)', 'important');
-          }
-        }}
+        className="hidden lg:block lg:static w-72"
       >
         <Sidebar 
-          onMobileClose={() => {
-            console.log('🔄 Dashboard: onMobileClose called, current state:', isSidebarOpen);
-            // IMMEDIATE state update - use multiple methods
-            setIsSidebarOpen(false);
-            
-            // Also force via functional update
-            setIsSidebarOpen(prev => {
-              console.log('🔄 Dashboard: setIsSidebarOpen functional update, prev:', prev);
-              return false;
-            });
-            
-            // DOM backup - find wrapper by ID and FORCE close
-            setTimeout(() => {
-              const wrapper = document.getElementById('sidebar-wrapper');
-              if (wrapper) {
-                // Set data attribute for CSS rule
-                wrapper.setAttribute('data-closed', 'true');
-                
-                // Remove open classes
-                wrapper.className = wrapper.className.replace(/translate-x-0/g, '').trim();
-                wrapper.classList.add('-translate-x-full');
-                
-                // Force transform
-                wrapper.style.removeProperty('transform');
-                wrapper.style.setProperty('transform', 'translateX(-100%)', 'important');
-                wrapper.style.setProperty('transition', 'transform 0.3s ease-in-out', 'important');
-                
-                console.log('✅ Dashboard: FORCE closed via DOM - transform:', wrapper.style.transform);
-                console.log('✅ Dashboard: data-closed attribute:', wrapper.getAttribute('data-closed'));
-              }
-              
-              // Hide overlay
-              document.querySelectorAll('.fixed.inset-0').forEach(el => {
-                if (el.classList.contains('bg-black') && el.classList.contains('bg-opacity-50')) {
-                  el.style.display = 'none';
-                }
-              });
-            }, 0);
-          }}
-          isOpen={isSidebarOpen}
+          onMobileClose={() => {}}
+          isOpen={true}
         />
       </div>
 
@@ -362,40 +311,19 @@ export default function Dashboard() {
             setUser(null);
           }}
           onMenuToggle={() => {
-            const newState = !isSidebarOpen;
-            setIsSidebarOpen(newState);
-            
-            // Also update data attribute
-            setTimeout(() => {
-              const wrapper = document.getElementById('sidebar-wrapper');
-              if (wrapper) {
-                if (newState) {
-                  wrapper.removeAttribute('data-closed');
-                } else {
-                  wrapper.setAttribute('data-closed', 'true');
-                  wrapper.style.setProperty('transform', 'translateX(-100%)', 'important');
-                }
-              }
-            }, 0);
+            // Only toggle on desktop (sidebar hidden on mobile)
+            setIsSidebarOpen(!isSidebarOpen);
           }}
           isSidebarOpen={isSidebarOpen}
         />
 
         {/* Rest of your dashboard content */}
-        <main className="p-4 lg:p-10 relative min-h-screen">
+        <main className="p-4 lg:p-10 relative min-h-screen pb-20 lg:pb-0">
           {/* 📱 Mobile-optimized Filters */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
             {/* Mobile Filter Header */}
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <span className="text-sm text-gray-400 whitespace-nowrap">Filters:</span>
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="lg:hidden bg-gray-800 p-2 rounded-md border border-gray-700"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
-                </svg>
-              </button>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -519,11 +447,14 @@ export default function Dashboard() {
           {/* 📱 Mobile-optimized Add Transaction FAB */}
           <button
             onClick={() => setShowModal(true)}
-            className="fixed bottom-6 right-6 lg:bottom-10 lg:right-10 bg-cyan-500 hover:bg-cyan-600 text-black font-bold rounded-full w-14 h-14 lg:w-16 lg:h-16 text-2xl lg:text-3xl shadow-lg transition-all hover:scale-110 z-30 flex items-center justify-center"
+            className="fixed bottom-20 right-6 lg:bottom-10 lg:right-10 bg-cyan-500 hover:bg-cyan-600 text-black font-bold rounded-full w-14 h-14 lg:w-16 lg:h-16 text-2xl lg:text-3xl shadow-lg transition-all hover:scale-110 z-30 flex items-center justify-center"
             aria-label="Add Transaction"
           >
             +
           </button>
+          
+          {/* 📱 Mobile Navigation Bar */}
+          <MobileNav />
 
           {showModal && (
             <AddTransactionModal

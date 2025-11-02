@@ -9,7 +9,7 @@ if os.path.exists(ENV_PATH):
     load_dotenv(ENV_PATH)
     print(f"✅ Loaded .env from: {ENV_PATH}")
 else:
-    print(f"❌ .env not found at: {ENV_PATH}")
+    print(f"🌐 Using environment variables from Render")
 
 class Config:
     # ------------------------------------------------------------

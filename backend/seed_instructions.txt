@@ -1,0 +1,1 @@
+Run python seed.py after you set up DB and run migrations. It will create a demo user and 180 sample transactions.

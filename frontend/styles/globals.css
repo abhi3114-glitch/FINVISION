@@ -173,6 +173,15 @@ select:focus-visible {
   }
 }
 
+/* 📱 Force sidebar close - mobile Chrome fix */
+#sidebar-wrapper[data-closed="true"] {
+  transform: translateX(-100%) !important;
+}
+
+#sidebar-wrapper[data-closed="true"] * {
+  pointer-events: none;
+}
+
 /* 📱 Print styles */
 @media print {
   .card-glow {

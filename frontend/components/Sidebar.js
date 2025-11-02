@@ -53,38 +53,53 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
       }
     }
     
-    // FORCE CLOSE via DOM - don't rely on React state
-    // Check actual DOM visibility first
+    // FORCE CLOSE via DOM - immediate execution
     const wrapper = document.getElementById('sidebar-wrapper');
     if (wrapper) {
       const computedStyle = window.getComputedStyle(wrapper);
       const currentTransform = computedStyle.transform;
-      const isVisible = currentTransform === 'none' || currentTransform.includes('matrix(1');
+      console.log('🔍 Click - Current wrapper transform:', currentTransform);
       
-      console.log('🔍 Current wrapper transform:', currentTransform);
-      console.log('🔍 Sidebar appears visible:', isVisible);
+      // Set data attribute for CSS rule (most reliable)
+      wrapper.setAttribute('data-closed', 'true');
       
-      if (isVisible || wrapper.classList.contains('translate-x-0')) {
-        // Sidebar IS visible - force close it
-        wrapper.classList.remove('translate-x-0');
-        wrapper.classList.add('-translate-x-full');
-        wrapper.style.setProperty('transform', 'translateX(-100%)', 'important');
-        wrapper.style.transition = 'transform 0.3s ease-in-out';
-        console.log('✅ FORCE closed visible sidebar via DOM (ID)');
-      }
+      // Remove ALL transform classes
+      wrapper.className = wrapper.className
+        .replace(/translate-x-0/g, '')
+        .replace(/translate-x-full/g, '')
+        .replace(/-translate-x-full/g, '')
+        .trim();
+      
+      wrapper.classList.add('-translate-x-full');
+      
+      // Force transform
+      wrapper.style.removeProperty('transform');
+      wrapper.style.setProperty('transform', 'translateX(-100%)', 'important');
+      wrapper.style.setProperty('transition', 'transform 0.3s ease-in-out', 'important');
+      
+      // Verify
+      setTimeout(() => {
+        const verify = window.getComputedStyle(wrapper).transform;
+        console.log('✅ Click - Applied transform. New computed:', verify);
+        console.log('✅ Data attribute:', wrapper.getAttribute('data-closed'));
+      }, 50);
+      
+      console.log('✅ FORCE closed visible sidebar via DOM (ID)');
     }
     
-    // Also check parent as backup
+    // Parent backup
     if (sidebarRef.current?.parentElement) {
       const wrapper2 = sidebarRef.current.parentElement;
-      wrapper2.classList.remove('translate-x-0');
+      wrapper2.setAttribute('data-closed', 'true');
+      wrapper2.className = wrapper2.className.replace(/translate-x-0/g, '').trim();
       wrapper2.classList.add('-translate-x-full');
+      wrapper2.style.removeProperty('transform');
       wrapper2.style.setProperty('transform', 'translateX(-100%)', 'important');
-      wrapper2.style.transition = 'transform 0.3s ease-in-out';
+      wrapper2.style.setProperty('transition', 'transform 0.3s ease-in-out', 'important');
       console.log('✅ FORCE closed sidebar via DOM (parent)');
     }
     
-    // Hide all overlays
+    // Hide overlays
     document.querySelectorAll('.fixed.inset-0').forEach(el => {
       if (el.classList.contains('bg-black') && el.classList.contains('bg-opacity-50')) {
         el.style.display = 'none';
@@ -112,28 +127,53 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
       e.nativeEvent.stopImmediatePropagation();
     }
     
-    // FORCE CLOSE via DOM - immediate, no setTimeout
+    // FORCE CLOSE via DOM - immediate
     const wrapper = document.getElementById('sidebar-wrapper');
     if (wrapper) {
       const computedStyle = window.getComputedStyle(wrapper);
       const currentTransform = computedStyle.transform;
       console.log('📱 Touch - Current transform:', currentTransform);
       
-      wrapper.classList.remove('translate-x-0');
+      // Set data attribute for CSS rule (most reliable)
+      wrapper.setAttribute('data-closed', 'true');
+      
+      // Remove ALL transform-related classes
+      wrapper.className = wrapper.className
+        .replace(/translate-x-0/g, '')
+        .replace(/translate-x-full/g, '')
+        .replace(/-translate-x-full/g, '')
+        .trim();
+      
       wrapper.classList.add('-translate-x-full');
+      
+      // Force transform with !important
+      wrapper.style.removeProperty('transform');
       wrapper.style.setProperty('transform', 'translateX(-100%)', 'important');
-      wrapper.style.transition = 'transform 0.3s ease-in-out';
+      wrapper.style.setProperty('transition', 'transform 0.3s ease-in-out', 'important');
+      
+      // Verify
+      setTimeout(() => {
+        const verify = window.getComputedStyle(wrapper).transform;
+        console.log('✅ Applied transform. New computed:', verify);
+        console.log('✅ Inline style:', wrapper.style.transform);
+        console.log('✅ Data attribute:', wrapper.getAttribute('data-closed'));
+      }, 50);
+      
       console.log('✅ FORCE closed sidebar via touch (ID)');
     }
     
+    // Parent backup
     if (sidebarRef.current?.parentElement) {
       const parent = sidebarRef.current.parentElement;
-      parent.classList.remove('translate-x-0');
+      parent.setAttribute('data-closed', 'true');
+      parent.className = parent.className.replace(/translate-x-0/g, '').trim();
       parent.classList.add('-translate-x-full');
+      parent.style.removeProperty('transform');
       parent.style.setProperty('transform', 'translateX(-100%)', 'important');
       console.log('✅ FORCE closed sidebar via touch (parent)');
     }
     
+    // Hide overlays
     document.querySelectorAll('.fixed.inset-0').forEach(el => {
       if (el.classList.contains('bg-black') && el.classList.contains('bg-opacity-50')) {
         el.style.display = 'none';

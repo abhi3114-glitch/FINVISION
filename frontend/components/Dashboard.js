@@ -323,13 +323,20 @@ export default function Dashboard() {
             setTimeout(() => {
               const wrapper = document.getElementById('sidebar-wrapper');
               if (wrapper) {
+                // Set data attribute for CSS rule
+                wrapper.setAttribute('data-closed', 'true');
+                
                 // Remove open classes
-                wrapper.classList.remove('translate-x-0');
+                wrapper.className = wrapper.className.replace(/translate-x-0/g, '').trim();
                 wrapper.classList.add('-translate-x-full');
+                
                 // Force transform
-                wrapper.style.transform = 'translateX(-100%)';
-                wrapper.style.transition = 'transform 0.3s ease-in-out';
+                wrapper.style.removeProperty('transform');
+                wrapper.style.setProperty('transform', 'translateX(-100%)', 'important');
+                wrapper.style.setProperty('transition', 'transform 0.3s ease-in-out', 'important');
+                
                 console.log('✅ Dashboard: FORCE closed via DOM - transform:', wrapper.style.transform);
+                console.log('✅ Dashboard: data-closed attribute:', wrapper.getAttribute('data-closed'));
               }
               
               // Hide overlay
@@ -354,7 +361,23 @@ export default function Dashboard() {
             toast.success("Logged out successfully!");
             setUser(null);
           }}
-          onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+          onMenuToggle={() => {
+            const newState = !isSidebarOpen;
+            setIsSidebarOpen(newState);
+            
+            // Also update data attribute
+            setTimeout(() => {
+              const wrapper = document.getElementById('sidebar-wrapper');
+              if (wrapper) {
+                if (newState) {
+                  wrapper.removeAttribute('data-closed');
+                } else {
+                  wrapper.setAttribute('data-closed', 'true');
+                  wrapper.style.setProperty('transform', 'translateX(-100%)', 'important');
+                }
+              }
+            }, 0);
+          }}
           isSidebarOpen={isSidebarOpen}
         />
 

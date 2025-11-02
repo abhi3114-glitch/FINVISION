@@ -5,11 +5,15 @@ import { motion } from "framer-motion";
 export default function DonutChart({ transactions = [] }) {
   const [animatedTotal, setAnimatedTotal] = useState(0);
 
-  // 🧾 Group expenses by category
+  // 🧾 Group EXPENSES by category (filter out income)
   const categoryTotals = {};
   transactions.forEach((t) => {
-    const cat = t.category || "Others";
-    categoryTotals[cat] = (categoryTotals[cat] || 0) + parseFloat(t.amount);
+    // ✅ Only include expense transactions
+    if (t.type === "expense") {
+      const cat = t.category || "Others";
+      const amount = parseFloat(t.amount) || 0;
+      categoryTotals[cat] = (categoryTotals[cat] || 0) + amount;
+    }
   });
 
   // Sort by value descending
@@ -44,6 +48,18 @@ export default function DonutChart({ transactions = [] }) {
     }, 16);
     return () => clearInterval(timer);
   }, [total]);
+
+  // Safe number formatter
+  const safeFormatNumber = (num) => {
+    const number = parseFloat(num);
+    return isNaN(number) ? '0' : number.toLocaleString();
+  };
+
+  // Safe percentage calculator
+  const safeCalculatePercentage = (value, total) => {
+    if (!total || total === 0) return '0.0';
+    return ((value / total) * 100).toFixed(1);
+  };
 
   return (
     <motion.div
@@ -110,18 +126,26 @@ export default function DonutChart({ transactions = [] }) {
           {/* 💬 Tooltip */}
           <Tooltip
             formatter={(value, name) => [
-              `₹${value.toLocaleString()} (${((value / total) * 100).toFixed(
-                1
-              )}%)`,
+              `₹${safeFormatNumber(value)} (${safeCalculatePercentage(value, total)}%)`,
               name,
             ]}
             contentStyle={{
-              backgroundColor: "rgba(227, 229, 241, 1)",
-              border: "1px solid rgba(0,255,255,0.2)",
-              color: "#fff",
+              backgroundColor: "rgba(11, 14, 32, 0.95)",
+              border: "1px solid rgba(6, 182, 212, 0.3)",
+              color: "#e2e8f0",
               borderRadius: "10px",
               fontSize: "0.85rem",
               boxShadow: "0 0 12px rgba(0,255,255,0.2)",
+              padding: "8px 12px",
+            }}
+            itemStyle={{
+              color: "#e2e8f0",
+              fontSize: "0.8rem",
+            }}
+            labelStyle={{
+              color: "#06b6d4",
+              fontWeight: "bold",
+              fontSize: "0.8rem",
             }}
           />
         </PieChart>
@@ -135,7 +159,7 @@ export default function DonutChart({ transactions = [] }) {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.6 }}
         >
-          <div className="text-xs text-gray-400 mb-1">Total</div>
+          <div className="text-xs text-gray-400 mb-1">Total Spent</div>
           <motion.div
             key={animatedTotal}
             initial={{ scale: 0.9, opacity: 0.8 }}
@@ -143,16 +167,26 @@ export default function DonutChart({ transactions = [] }) {
             transition={{ duration: 0.3 }}
             className="text-lg font-semibold bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-400 text-transparent bg-clip-text"
           >
-            ₹{animatedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            ₹{safeFormatNumber(animatedTotal)}
           </motion.div>
+          <div className="text-xs text-gray-500 mt-1">
+            {data.length} {data.length === 1 ? 'category' : 'categories'}
+          </div>
         </motion.div>
       )}
 
       {/* 🌌 Empty State */}
       {data.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
-          No data yet — add transactions to see breakdown 📊
-        </div>
+        <motion.div 
+          className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 text-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="text-4xl mb-2">📊</div>
+          <div>No expense data</div>
+          <div className="text-xs text-gray-600 mt-1">Add expense transactions to see breakdown</div>
+        </motion.div>
       )}
     </motion.div>
   );

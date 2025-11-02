@@ -18,7 +18,7 @@ import {
 
 export default function Analytics() {
   const [transactions, setTransactions] = useState([]);
-  const [summary, setSummary] = useState({ total: 0 });
+  const [summary, setSummary] = useState({ total_income: 0, total_expense: 0, net_balance: 0 });
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [forecast, setForecast] = useState("");
@@ -92,12 +92,12 @@ export default function Analytics() {
         API.get(`/api/summary${query}`),
       ]);
       setTransactions(Array.isArray(tx) ? tx : []);
-      setSummary(sum || { total: 0 });
+      setSummary(sum || { total_income: 0, total_expense: 0, net_balance: 0 });
     } catch (err) {
       console.error(err);
       toast.error("Failed to load analytics");
       setTransactions([]);
-      setSummary({ total: 0 });
+      setSummary({ total_income: 0, total_expense: 0, net_balance: 0 });
     } finally {
       setLoading(false);
     }
@@ -160,11 +160,14 @@ export default function Analytics() {
       </div>
     );
 
-  // 📊 Prepare chart data - SAFE VERSION
+  // 📊 Prepare chart data - SHOW ONLY EXPENSES
   const monthlyData = transactions.reduce((acc, t) => {
-    const month = new Date(t.date).toLocaleString("default", { month: "short" });
-    const amount = parseFloat(t.amount) || 0;
-    acc[month] = (acc[month] || 0) + amount;
+    // ✅ Only include expense transactions
+    if (t.type === "expense") {
+      const month = new Date(t.date).toLocaleString("default", { month: "short" });
+      const amount = parseFloat(t.amount) || 0;
+      acc[month] = (acc[month] || 0) + amount;
+    }
     return acc;
   }, {});
   const barData = Object.keys(monthlyData).map((m) => ({
@@ -173,9 +176,12 @@ export default function Analytics() {
   }));
 
   const categoryData = transactions.reduce((acc, t) => {
-    const amount = parseFloat(t.amount) || 0;
-    const categoryName = t.category || 'Other';
-    acc[categoryName] = (acc[categoryName] || 0) + amount;
+    // ✅ Only include expense transactions
+    if (t.type === "expense") {
+      const amount = parseFloat(t.amount) || 0;
+      const categoryName = t.category || 'Other';
+      acc[categoryName] = (acc[categoryName] || 0) + amount;
+    }
     return acc;
   }, {});
   const pieData = Object.keys(categoryData).map((k) => ({
@@ -188,9 +194,9 @@ export default function Analytics() {
       ? pieData.sort((a, b) => b.value - a.value)[0].name
       : "N/A";
 
-  // Safe average calculation
-  const totalAmount = parseFloat(summary.total) || 0;
-  const avgPerDay = totalAmount > 0 ? (totalAmount / 30) : 0;
+  // Safe average calculation - USE EXPENSE DATA
+  const totalExpense = parseFloat(summary.total_expense) || 0;
+  const avgPerDay = totalExpense > 0 ? (totalExpense / 30) : 0;
 
   const tooltipStyle = {
     backgroundColor: "#0f172a",
@@ -265,7 +271,7 @@ export default function Analytics() {
           <div className="bg-[#0b0e20] p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
             <h3 className="text-gray-400 text-sm">Total Spent</h3>
             <p className="text-2xl font-bold text-cyan-400 mt-2">
-              ₹{safeFormatNumber(summary.total)}  {/* ✅ FIXED */}
+              ₹{safeFormatNumber(summary.total_expense || 0)}  {/* ✅ FIXED: Use total_expense */}
             </p>
           </div>
           <div className="bg-[#0b0e20] p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
@@ -277,7 +283,7 @@ export default function Analytics() {
           <div className="bg-[#0b0e20] p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
             <h3 className="text-gray-400 text-sm">Avg per Day</h3>
             <p className="text-2xl font-bold text-cyan-400 mt-2">
-              ₹{safeFormatNumber(avgPerDay)}  {/* ✅ FIXED */}
+              ₹{safeFormatNumber(avgPerDay)}  {/* ✅ FIXED: Uses expense data */}
             </p>
           </div>
         </div>

@@ -2,8 +2,10 @@ Flask==3.1.2
 Flask-SQLAlchemy
 Flask-JWT-Extended
 Flask-Migrate
+Flask-CORS
 Authlib
 requests
 python-dotenv
 gunicorn
 pandas==2.2.2
+

@@ -1,4 +1,3 @@
-# models.py
 from extensions import db
 from datetime import datetime
 
@@ -33,15 +32,25 @@ class Transaction(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    date = db.Column(db.Date, default=datetime.utcnow, nullable=False)
     name = db.Column(db.String(255), nullable=False)
     amount = db.Column(db.Numeric(10, 2), nullable=False)
+    date = db.Column(db.Date, default=datetime.utcnow, nullable=False)
     category = db.Column(db.String(100), nullable=True)
+    type = db.Column(db.String(20), default="expense", nullable=False)  # ✅ NEW FIELD
     auto_categorized = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     def __repr__(self):
-        return f"<Transaction {self.name} - ₹{self.amount}>"
+        return f"<Transaction {self.name} ({self.type}) - ₹{self.amount}>"
+
+    # ✅ Utility property for quick insights
+    @property
+    def is_income(self):
+        return self.type.lower() == "income"
+
+    @property
+    def is_expense(self):
+        return self.type.lower() == "expense"
 
 
 # ------------------------------------------------------------

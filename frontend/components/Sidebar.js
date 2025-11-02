@@ -41,7 +41,7 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
     }
   };
 
-  // 📱 Simple and reliable close handler for mobile Chrome
+  // 📱 Simple and reliable close handler - FORCE CLOSE regardless of state
   const handleClose = (e) => {
     console.log('🔄 Close button clicked!');
     if (e) {
@@ -53,56 +53,58 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
       }
     }
     
-    // IMMEDIATE execution - try multiple methods
-    if (onMobileClose) {
-      console.log('🔄 Calling onMobileClose function');
-      try {
-        // Call directly
-        onMobileClose();
-        
-        // DOM manipulation as primary method for mobile Chrome
-        setTimeout(() => {
-          // Method 1: Find wrapper by ID (most reliable)
-          const wrapperById = document.getElementById('sidebar-wrapper');
-          if (wrapperById) {
-            wrapperById.style.transform = 'translateX(-100%)';
-            wrapperById.style.transition = 'transform 0.3s ease-in-out';
-            console.log('✅ Applied DOM transform via ID');
-          }
-          
-          // Method 2: Find wrapper by parent
-          if (sidebarRef.current && sidebarRef.current.parentElement) {
-            const wrapper = sidebarRef.current.parentElement;
-            if (wrapper && !wrapperById) {
-              wrapper.style.transform = 'translateX(-100%)';
-              wrapper.style.transition = 'transform 0.3s ease-in-out';
-              console.log('✅ Applied DOM transform via parent');
-            }
-          }
-          
-          // Hide overlay
-          const overlays = document.querySelectorAll('.fixed.inset-0');
-          overlays.forEach(overlay => {
-            if (overlay.classList.contains('bg-black') && overlay.classList.contains('bg-opacity-50')) {
-              overlay.style.display = 'none';
-              console.log('✅ Hid overlay');
-            }
-          });
-        }, 0);
-        
-        console.log('✅ onMobileClose called successfully');
-      } catch (err) {
-        console.error('❌ Error closing sidebar:', err);
+    // FORCE CLOSE via DOM - don't rely on React state
+    // Check actual DOM visibility first
+    const wrapper = document.getElementById('sidebar-wrapper');
+    if (wrapper) {
+      const computedStyle = window.getComputedStyle(wrapper);
+      const currentTransform = computedStyle.transform;
+      const isVisible = currentTransform === 'none' || currentTransform.includes('matrix(1');
+      
+      console.log('🔍 Current wrapper transform:', currentTransform);
+      console.log('🔍 Sidebar appears visible:', isVisible);
+      
+      if (isVisible || wrapper.classList.contains('translate-x-0')) {
+        // Sidebar IS visible - force close it
+        wrapper.classList.remove('translate-x-0');
+        wrapper.classList.add('-translate-x-full');
+        wrapper.style.setProperty('transform', 'translateX(-100%)', 'important');
+        wrapper.style.transition = 'transform 0.3s ease-in-out';
+        console.log('✅ FORCE closed visible sidebar via DOM (ID)');
       }
-    } else {
-      console.error('❌ onMobileClose is not available!');
+    }
+    
+    // Also check parent as backup
+    if (sidebarRef.current?.parentElement) {
+      const wrapper2 = sidebarRef.current.parentElement;
+      wrapper2.classList.remove('translate-x-0');
+      wrapper2.classList.add('-translate-x-full');
+      wrapper2.style.setProperty('transform', 'translateX(-100%)', 'important');
+      wrapper2.style.transition = 'transform 0.3s ease-in-out';
+      console.log('✅ FORCE closed sidebar via DOM (parent)');
+    }
+    
+    // Hide all overlays
+    document.querySelectorAll('.fixed.inset-0').forEach(el => {
+      if (el.classList.contains('bg-black') && el.classList.contains('bg-opacity-50')) {
+        el.style.display = 'none';
+        console.log('✅ Hid overlay');
+      }
+    });
+    
+    // Also call React handler to sync state
+    if (onMobileClose) {
+      try {
+        onMobileClose();
+      } catch (err) {
+        console.error('❌ Error in onMobileClose:', err);
+      }
     }
   };
 
-  // Touch handler specifically for mobile Chrome
+  // Touch handler - same force close approach
   const handleTouch = (e) => {
     console.log('📱 Touch end event fired!');
-    // Prevent all default behaviors
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation?.();
@@ -110,33 +112,41 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
       e.nativeEvent.stopImmediatePropagation();
     }
     
-    // IMMEDIATE call
+    // FORCE CLOSE via DOM - immediate, no setTimeout
+    const wrapper = document.getElementById('sidebar-wrapper');
+    if (wrapper) {
+      const computedStyle = window.getComputedStyle(wrapper);
+      const currentTransform = computedStyle.transform;
+      console.log('📱 Touch - Current transform:', currentTransform);
+      
+      wrapper.classList.remove('translate-x-0');
+      wrapper.classList.add('-translate-x-full');
+      wrapper.style.setProperty('transform', 'translateX(-100%)', 'important');
+      wrapper.style.transition = 'transform 0.3s ease-in-out';
+      console.log('✅ FORCE closed sidebar via touch (ID)');
+    }
+    
+    if (sidebarRef.current?.parentElement) {
+      const parent = sidebarRef.current.parentElement;
+      parent.classList.remove('translate-x-0');
+      parent.classList.add('-translate-x-full');
+      parent.style.setProperty('transform', 'translateX(-100%)', 'important');
+      console.log('✅ FORCE closed sidebar via touch (parent)');
+    }
+    
+    document.querySelectorAll('.fixed.inset-0').forEach(el => {
+      if (el.classList.contains('bg-black') && el.classList.contains('bg-opacity-50')) {
+        el.style.display = 'none';
+      }
+    });
+    
+    // Sync React state
     if (onMobileClose) {
-      console.log('📱 Calling onMobileClose from touch handler');
       try {
         onMobileClose();
-        
-        // Backup DOM manipulation
-        if (sidebarRef.current && sidebarRef.current.parentElement) {
-          const wrapper = sidebarRef.current.parentElement;
-          if (wrapper) {
-            wrapper.style.transform = 'translateX(-100%)';
-            wrapper.style.transition = 'transform 0.3s ease-in-out';
-            
-            // Hide overlay
-            const overlay = document.querySelector('[class*="bg-black"][class*="bg-opacity-50"]');
-            if (overlay && overlay.style) {
-              overlay.style.display = 'none';
-            }
-          }
-        }
-        
-        console.log('✅ onMobileClose called successfully from touch');
       } catch (err) {
-        console.error('❌ Error closing sidebar from touch:', err);
+        console.error('❌ Error in onMobileClose:', err);
       }
-    } else {
-      console.error('❌ onMobileClose is not available in touch handler!');
     }
   };
 

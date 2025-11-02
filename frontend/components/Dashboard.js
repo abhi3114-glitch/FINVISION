@@ -299,6 +299,13 @@ export default function Dashboard() {
             : '-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden'
           }
         `}
+        ref={(el) => {
+          // Store ref for direct manipulation
+          if (el && !isSidebarOpen && window.innerWidth < 1024) {
+            // On mobile, if state says closed, ensure DOM matches
+            el.style.setProperty('transform', 'translateX(-100%)', 'important');
+          }
+        }}
       >
         <Sidebar 
           onMobileClose={() => {
@@ -312,18 +319,24 @@ export default function Dashboard() {
               return false;
             });
             
-            // DOM backup - find wrapper by ID
+            // DOM backup - find wrapper by ID and FORCE close
             setTimeout(() => {
               const wrapper = document.getElementById('sidebar-wrapper');
               if (wrapper) {
+                // Remove open classes
+                wrapper.classList.remove('translate-x-0');
+                wrapper.classList.add('-translate-x-full');
+                // Force transform
                 wrapper.style.transform = 'translateX(-100%)';
-                console.log('✅ Dashboard: Applied DOM transform via ID');
+                wrapper.style.transition = 'transform 0.3s ease-in-out';
+                console.log('✅ Dashboard: FORCE closed via DOM - transform:', wrapper.style.transform);
               }
               
               // Hide overlay
-              const overlays = document.querySelectorAll('[class*="bg-black"][class*="bg-opacity-50"]');
-              overlays.forEach(overlay => {
-                if (overlay.style) overlay.style.display = 'none';
+              document.querySelectorAll('.fixed.inset-0').forEach(el => {
+                if (el.classList.contains('bg-black') && el.classList.contains('bg-opacity-50')) {
+                  el.style.display = 'none';
+                }
               });
             }, 0);
           }}

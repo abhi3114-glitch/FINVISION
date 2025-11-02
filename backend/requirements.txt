@@ -1,9 +1,8 @@
-Flask==2.3.2
-Flask-SQLAlchemy==3.0.3
-psycopg2-binary==2.9.9
-python-dotenv==1.0.0
-Flask-Migrate==4.0.4
-pandas==2.1.3
-requests==2.31.0
-gunicorn==20.1.0
-python-jose==3.3.0
+Flask
+Flask-SQLAlchemy
+Flask-JWT-Extended
+Authlib
+requests
+python-dotenv
+gunicorn
+pandas==2.2.2

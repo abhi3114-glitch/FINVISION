@@ -8,6 +8,7 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
   const user = API.getUser();
   const [aiThinking, setAiThinking] = useState(false);
   const closeButtonRef = useRef(null);
+  const sidebarRef = useRef(null);
 
   // 💡 Listen to Gemini "thinking" state from localStorage
   useEffect(() => {
@@ -46,17 +47,37 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation?.();
       if (e.nativeEvent) {
         e.nativeEvent.stopImmediatePropagation();
       }
     }
     
-    // IMMEDIATE execution - no delays, no wrappers
+    // IMMEDIATE execution - try multiple methods
     if (onMobileClose) {
       console.log('🔄 Calling onMobileClose function');
-      // Call directly - this should work immediately
       try {
+        // Call directly
         onMobileClose();
+        
+        // Also try forcing via DOM manipulation as backup
+        // The wrapper div is the parent of the sidebar (aside element)
+        if (sidebarRef.current && sidebarRef.current.parentElement) {
+          const wrapper = sidebarRef.current.parentElement;
+          if (wrapper) {
+            // Force the transform
+            wrapper.style.transform = 'translateX(-100%)';
+            wrapper.style.transition = 'transform 0.3s ease-in-out';
+            console.log('✅ Also applied direct DOM transform to wrapper');
+            
+            // Also hide overlay
+            const overlay = document.querySelector('[class*="bg-black"][class*="bg-opacity-50"]');
+            if (overlay && overlay.style) {
+              overlay.style.display = 'none';
+            }
+          }
+        }
+        
         console.log('✅ onMobileClose called successfully');
       } catch (err) {
         console.error('❌ Error closing sidebar:', err);
@@ -66,12 +87,13 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
     }
   };
 
-  // Touch handler specifically for mobile Chrome - use onTouchEnd for reliability
+  // Touch handler specifically for mobile Chrome
   const handleTouch = (e) => {
     console.log('📱 Touch end event fired!');
     // Prevent all default behaviors
     e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation?.();
     if (e.nativeEvent) {
       e.nativeEvent.stopImmediatePropagation();
     }
@@ -81,6 +103,22 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
       console.log('📱 Calling onMobileClose from touch handler');
       try {
         onMobileClose();
+        
+        // Backup DOM manipulation
+        if (sidebarRef.current && sidebarRef.current.parentElement) {
+          const wrapper = sidebarRef.current.parentElement;
+          if (wrapper) {
+            wrapper.style.transform = 'translateX(-100%)';
+            wrapper.style.transition = 'transform 0.3s ease-in-out';
+            
+            // Hide overlay
+            const overlay = document.querySelector('[class*="bg-black"][class*="bg-opacity-50"]');
+            if (overlay && overlay.style) {
+              overlay.style.display = 'none';
+            }
+          }
+        }
+        
         console.log('✅ onMobileClose called successfully from touch');
       } catch (err) {
         console.error('❌ Error closing sidebar from touch:', err);
@@ -103,6 +141,7 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
     <>
       {/* 📱🖥️ Sidebar Container - Responsive for mobile and desktop */}
       <aside 
+        ref={sidebarRef}
         className={`
           w-72 lg:w-72 h-screen fixed left-0 top-0 flex flex-col p-4 lg:p-6 border-r border-white/10 z-[1000] 
           bg-[#0b0f1a]/95 backdrop-blur-md overflow-y-auto

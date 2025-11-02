@@ -64,7 +64,7 @@ def create_app():
     # ✅ Auto-create tables if DB is empty (for Render deployment)
     with app.app_context():
         try:
-            from models import User, Expense, Transaction  # Adjust if more models
+            from models import User, Transaction, Category, Goal, Forecast
             db.create_all()
             print("✅ Database tables verified/created successfully.")
         except Exception as e:

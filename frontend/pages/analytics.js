@@ -243,7 +243,7 @@ export default function Analytics() {
       
       {/* ✅ Sidebar with mobile and desktop responsiveness */}
       <div className={`
-        fixed lg:static inset-y-0 left-0 z-50
+        fixed lg:static inset-y-0 left-0 z-[1001]
         transform transition-all duration-300 ease-in-out
         ${isSidebarOpen 
           ? 'translate-x-0 lg:translate-x-0 lg:w-72' 

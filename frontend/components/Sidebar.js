@@ -1,12 +1,13 @@
 import { motion } from "framer-motion";
 import { useRouter } from "next/router";
 import { API } from "../lib/api";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function Sidebar({ onMobileClose, isOpen = true }) {
   const router = useRouter();
   const user = API.getUser();
   const [aiThinking, setAiThinking] = useState(false);
+  const closeButtonRef = useRef(null);
 
   // 💡 Listen to Gemini "thinking" state from localStorage
   useEffect(() => {
@@ -39,39 +40,29 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
     }
   };
 
-  // 📱 Handle close button click - Mobile Chrome Fixed
+  // 📱 Simple and reliable close handler for mobile Chrome
   const handleClose = (e) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
-      // Prevent any parent handlers
       if (e.nativeEvent) {
         e.nativeEvent.stopImmediatePropagation();
       }
     }
     
-    // Ensure we close the sidebar on mobile - use setTimeout for mobile Chrome compatibility
+    // Direct call - immediate execution
     if (onMobileClose && typeof onMobileClose === 'function') {
-      // Small delay ensures touch event is fully processed
-      setTimeout(() => {
-        onMobileClose();
-      }, 10);
+      onMobileClose();
     }
   };
 
-  // Additional touch handler for mobile Chrome compatibility
-  const handleTouchStart = (e) => {
-    // Don't preventDefault here - let the browser handle the touch
-    e.stopPropagation();
-  };
-
-  const handleTouchEnd = (e) => {
+  // Touch handler specifically for mobile Chrome
+  const handleTouch = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.nativeEvent) {
       e.nativeEvent.stopImmediatePropagation();
     }
-    // Direct call for immediate response
     if (onMobileClose && typeof onMobileClose === 'function') {
       onMobileClose();
     }
@@ -91,11 +82,12 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
       {/* 📱🖥️ Sidebar Container - Responsive for mobile and desktop */}
       <aside 
         className={`
-          w-72 lg:w-72 h-screen fixed left-0 top-0 flex flex-col p-4 lg:p-6 border-r border-white/10 z-[999] 
+          w-72 lg:w-72 h-screen fixed left-0 top-0 flex flex-col p-4 lg:p-6 border-r border-white/10 z-[1000] 
           bg-[#0b0f1a]/95 backdrop-blur-md overflow-y-auto
           lg:relative lg:z-auto
         `}
         style={{ pointerEvents: 'auto' }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* 📱 Mobile Header with Close Button */}
         <div className="flex items-center justify-between mb-6 lg:mb-8 relative" style={{ pointerEvents: 'auto' }}>
@@ -106,16 +98,13 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
             <div className="text-xs text-gray-400 mt-1">Smart Expense Tracker</div>
           </div>
           
-          {/* 📱 Mobile Close Button - Only visible on mobile */}
+          {/* 📱 Mobile Close Button - Only visible on mobile - Mobile Chrome Fixed */}
           <button
+            ref={closeButtonRef}
             onClick={handleClose}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              handleClose(e);
-            }}
-            className="lg:hidden bg-red-500 hover:bg-red-600 active:bg-red-700 p-3.5 rounded-lg border-2 border-red-300 transition-all z-[10000] relative touch-manipulation ml-2 flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            onTouchEnd={handleTouch}
+            onTouchStart={(e) => e.stopPropagation()}
+            className="lg:hidden bg-red-500 hover:bg-red-600 active:bg-red-700 p-4 rounded-lg border-2 border-red-300 transition-all touch-manipulation ml-2 flex-shrink-0 min-w-[48px] min-h-[48px] flex items-center justify-center"
             style={{ 
               WebkitTapHighlightColor: 'transparent',
               WebkitTouchCallout: 'none',
@@ -124,13 +113,14 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
               userSelect: 'none',
               pointerEvents: 'auto',
               position: 'relative',
-              zIndex: 10000,
-              msTouchAction: 'manipulation'
+              zIndex: 10001,
+              msTouchAction: 'manipulation',
+              isolation: 'isolate'
             }}
             aria-label="Close menu"
             type="button"
           >
-            <svg className="w-6 h-6 text-white pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+            <svg className="w-7 h-7 text-white pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>

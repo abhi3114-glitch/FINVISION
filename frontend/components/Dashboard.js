@@ -289,27 +289,43 @@ export default function Dashboard() {
       )}
       
       {/* ✅ Sidebar with mobile and desktop responsiveness */}
-      <div className={`
-        fixed lg:static inset-y-0 left-0 z-[1001]
-        transform transition-all duration-300 ease-in-out
-        ${isSidebarOpen 
-          ? 'translate-x-0 lg:translate-x-0 lg:w-72' 
-          : '-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden'
-        }
-      `}>
+      <div 
+        id="sidebar-wrapper"
+        className={`
+          fixed lg:static inset-y-0 left-0 z-[1001]
+          transform transition-all duration-300 ease-in-out
+          ${isSidebarOpen 
+            ? 'translate-x-0 lg:translate-x-0 lg:w-72' 
+            : '-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden'
+          }
+        `}
+      >
         <Sidebar 
           onMobileClose={() => {
             console.log('🔄 Dashboard: onMobileClose called, current state:', isSidebarOpen);
-            // Use functional update to ensure state change
+            // IMMEDIATE state update - use multiple methods
+            setIsSidebarOpen(false);
+            
+            // Also force via functional update
             setIsSidebarOpen(prev => {
-              console.log('🔄 Dashboard: setIsSidebarOpen called, prev:', prev);
-              if (prev) {
-                console.log('✅ Dashboard: Setting sidebar to closed');
-                return false;
-              }
-              console.log('⚠️ Dashboard: Sidebar already closed');
-              return prev;
+              console.log('🔄 Dashboard: setIsSidebarOpen functional update, prev:', prev);
+              return false;
             });
+            
+            // DOM backup - find wrapper by ID
+            setTimeout(() => {
+              const wrapper = document.getElementById('sidebar-wrapper');
+              if (wrapper) {
+                wrapper.style.transform = 'translateX(-100%)';
+                console.log('✅ Dashboard: Applied DOM transform via ID');
+              }
+              
+              // Hide overlay
+              const overlays = document.querySelectorAll('[class*="bg-black"][class*="bg-opacity-50"]');
+              overlays.forEach(overlay => {
+                if (overlay.style) overlay.style.display = 'none';
+              });
+            }, 0);
           }}
           isOpen={isSidebarOpen}
         />

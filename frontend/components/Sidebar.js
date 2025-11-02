@@ -60,23 +60,35 @@ export default function Sidebar({ onMobileClose, isOpen = true }) {
         // Call directly
         onMobileClose();
         
-        // Also try forcing via DOM manipulation as backup
-        // The wrapper div is the parent of the sidebar (aside element)
-        if (sidebarRef.current && sidebarRef.current.parentElement) {
-          const wrapper = sidebarRef.current.parentElement;
-          if (wrapper) {
-            // Force the transform
-            wrapper.style.transform = 'translateX(-100%)';
-            wrapper.style.transition = 'transform 0.3s ease-in-out';
-            console.log('✅ Also applied direct DOM transform to wrapper');
-            
-            // Also hide overlay
-            const overlay = document.querySelector('[class*="bg-black"][class*="bg-opacity-50"]');
-            if (overlay && overlay.style) {
-              overlay.style.display = 'none';
+        // DOM manipulation as primary method for mobile Chrome
+        setTimeout(() => {
+          // Method 1: Find wrapper by ID (most reliable)
+          const wrapperById = document.getElementById('sidebar-wrapper');
+          if (wrapperById) {
+            wrapperById.style.transform = 'translateX(-100%)';
+            wrapperById.style.transition = 'transform 0.3s ease-in-out';
+            console.log('✅ Applied DOM transform via ID');
+          }
+          
+          // Method 2: Find wrapper by parent
+          if (sidebarRef.current && sidebarRef.current.parentElement) {
+            const wrapper = sidebarRef.current.parentElement;
+            if (wrapper && !wrapperById) {
+              wrapper.style.transform = 'translateX(-100%)';
+              wrapper.style.transition = 'transform 0.3s ease-in-out';
+              console.log('✅ Applied DOM transform via parent');
             }
           }
-        }
+          
+          // Hide overlay
+          const overlays = document.querySelectorAll('.fixed.inset-0');
+          overlays.forEach(overlay => {
+            if (overlay.classList.contains('bg-black') && overlay.classList.contains('bg-opacity-50')) {
+              overlay.style.display = 'none';
+              console.log('✅ Hid overlay');
+            }
+          });
+        }, 0);
         
         console.log('✅ onMobileClose called successfully');
       } catch (err) {

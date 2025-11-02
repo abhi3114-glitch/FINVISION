@@ -172,20 +172,27 @@ export default function Transactions() {
       )}
       
       {/* ✅ Sidebar with mobile and desktop responsiveness */}
-      <div className={`
-        fixed lg:static inset-y-0 left-0 z-[1001]
-        transform transition-all duration-300 ease-in-out
-        ${isSidebarOpen 
-          ? 'translate-x-0 lg:translate-x-0 lg:w-72' 
-          : '-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden'
-        }
-      `}>
+      <div 
+        id="sidebar-wrapper"
+        className={`
+          fixed lg:static inset-y-0 left-0 z-[1001]
+          transform transition-all duration-300 ease-in-out
+          ${isSidebarOpen 
+            ? 'translate-x-0 lg:translate-x-0 lg:w-72' 
+            : '-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden'
+          }
+        `}
+      >
         <Sidebar 
           onMobileClose={() => {
-            setIsSidebarOpen(prev => {
-              if (prev) return false;
-              return prev;
-            });
+            setIsSidebarOpen(false);
+            setTimeout(() => {
+              const wrapper = document.getElementById('sidebar-wrapper');
+              if (wrapper) wrapper.style.transform = 'translateX(-100%)';
+              document.querySelectorAll('.fixed.inset-0.bg-black').forEach(el => {
+                if (el.classList.contains('bg-opacity-50')) el.style.display = 'none';
+              });
+            }, 0);
           }}
           isOpen={isSidebarOpen}
         />

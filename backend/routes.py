@@ -229,7 +229,7 @@ def delete_transaction(transaction_id):
 
 
 # ------------------------------------------------------------
-# 📊 Summary (supports filters)
+# 📊 General Summary (with filters)
 # ------------------------------------------------------------
 @api_bp.route("/summary", methods=["GET"])
 @jwt_required(optional=True)
@@ -247,8 +247,26 @@ def summary():
     if category and category.lower() != "all":
         q = q.filter(Transaction.category == category)
 
-    total = q.with_entities(func.coalesce(func.sum(Transaction.amount), 0)).scalar() or 0
-    return jsonify({"total": float(total)})
+    # Separate totals by type
+    total_income = (
+        q.with_entities(func.coalesce(func.sum(Transaction.amount), 0))
+        .filter(Transaction.type == "income")
+        .scalar()
+        or 0
+    )
+    total_expense = (
+        q.with_entities(func.coalesce(func.sum(Transaction.amount), 0))
+        .filter(Transaction.type == "expense")
+        .scalar()
+        or 0
+    )
+    net_balance = float(total_income) - float(total_expense)
+
+    return jsonify({
+        "total_income": float(total_income),
+        "total_expense": float(total_expense),
+        "net_balance": net_balance
+    })
 
 
 # ------------------------------------------------------------
@@ -257,7 +275,19 @@ def summary():
 @api_bp.route("/dashboard/summary/<int:user_id>", methods=["GET"])
 @jwt_required(optional=True)
 def dashboard_summary(user_id):
-    txs = Transaction.query.filter_by(user_id=user_id).all()
+    start = request.args.get("start")
+    end = request.args.get("end")
+    category = request.args.get("category")
+
+    q = Transaction.query.filter(Transaction.user_id == user_id)
+    if start:
+        q = q.filter(Transaction.date >= start)
+    if end:
+        q = q.filter(Transaction.date <= end)
+    if category and category.lower() != "all":
+        q = q.filter(Transaction.category == category)
+
+    txs = q.all()
 
     if not txs:
         return jsonify({

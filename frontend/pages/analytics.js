@@ -40,6 +40,12 @@ export default function Analytics() {
     "#94a3b8",
   ];
 
+  // Safe number formatter
+  const safeFormatNumber = (num) => {
+    const number = parseFloat(num);
+    return isNaN(number) ? '0.00' : number.toFixed(2);
+  };
+
   // 📅 Date range utility
   function getDateParams() {
     const today = new Date();
@@ -85,11 +91,13 @@ export default function Analytics() {
         API.get(`/api/transactions${query}`),
         API.get(`/api/summary${query}`),
       ]);
-      setTransactions(tx);
-      setSummary(sum);
+      setTransactions(Array.isArray(tx) ? tx : []);
+      setSummary(sum || { total: 0 });
     } catch (err) {
       console.error(err);
       toast.error("Failed to load analytics");
+      setTransactions([]);
+      setSummary({ total: 0 });
     } finally {
       setLoading(false);
     }
@@ -152,10 +160,11 @@ export default function Analytics() {
       </div>
     );
 
-  // 📊 Prepare chart data
+  // 📊 Prepare chart data - SAFE VERSION
   const monthlyData = transactions.reduce((acc, t) => {
     const month = new Date(t.date).toLocaleString("default", { month: "short" });
-    acc[month] = (acc[month] || 0) + parseFloat(t.amount);
+    const amount = parseFloat(t.amount) || 0;
+    acc[month] = (acc[month] || 0) + amount;
     return acc;
   }, {});
   const barData = Object.keys(monthlyData).map((m) => ({
@@ -164,7 +173,9 @@ export default function Analytics() {
   }));
 
   const categoryData = transactions.reduce((acc, t) => {
-    acc[t.category] = (acc[t.category] || 0) + parseFloat(t.amount);
+    const amount = parseFloat(t.amount) || 0;
+    const categoryName = t.category || 'Other';
+    acc[categoryName] = (acc[categoryName] || 0) + amount;
     return acc;
   }, {});
   const pieData = Object.keys(categoryData).map((k) => ({
@@ -177,7 +188,9 @@ export default function Analytics() {
       ? pieData.sort((a, b) => b.value - a.value)[0].name
       : "N/A";
 
-  const avgPerDay = (summary.total / 30).toFixed(2);
+  // Safe average calculation
+  const totalAmount = parseFloat(summary.total) || 0;
+  const avgPerDay = totalAmount > 0 ? (totalAmount / 30) : 0;
 
   const tooltipStyle = {
     backgroundColor: "#0f172a",
@@ -247,12 +260,12 @@ export default function Analytics() {
           )}
         </div>
 
-        {/* Top Summary Cards */}
+        {/* Top Summary Cards - FIXED VERSION */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <div className="bg-[#0b0e20] p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
             <h3 className="text-gray-400 text-sm">Total Spent</h3>
             <p className="text-2xl font-bold text-cyan-400 mt-2">
-              ₹{summary.total.toFixed(2)}
+              ₹{safeFormatNumber(summary.total)}  {/* ✅ FIXED */}
             </p>
           </div>
           <div className="bg-[#0b0e20] p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
@@ -263,7 +276,9 @@ export default function Analytics() {
           </div>
           <div className="bg-[#0b0e20] p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
             <h3 className="text-gray-400 text-sm">Avg per Day</h3>
-            <p className="text-2xl font-bold text-cyan-400 mt-2">₹{avgPerDay}</p>
+            <p className="text-2xl font-bold text-cyan-400 mt-2">
+              ₹{safeFormatNumber(avgPerDay)}  {/* ✅ FIXED */}
+            </p>
           </div>
         </div>
 

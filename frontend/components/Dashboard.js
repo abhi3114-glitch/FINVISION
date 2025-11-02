@@ -287,7 +287,7 @@ export default function Dashboard() {
             toast.success("Logged out successfully!");
             setUser(null);
           }}
-          onMenuClick={() => setIsSidebarOpen(true)} {/* ✅ Fixed: Simple prop name */}
+          onMenuClick={() => setIsSidebarOpen(true)} 
         />
 
         {/* Rest of your dashboard content */}

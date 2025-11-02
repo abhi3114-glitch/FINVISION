@@ -1,3 +1,4 @@
+# routes.py
 from flask import Blueprint, request, jsonify, redirect, url_for, session, current_app
 from extensions import db, oauth
 from models import User, Transaction, Goal
@@ -85,6 +86,10 @@ def google_callback():
 # 🧠 Helper: Get Current User
 # ------------------------------------------------------------
 def get_current_user():
+    """
+    Try verifying JWT first. If not present or invalid, fall back to
+    the first user (demo) — created if none exists.
+    """
     try:
         verify_jwt_in_request()
     except Exception:
@@ -96,6 +101,7 @@ def get_current_user():
         if user:
             return user
 
+    # Fallback demo user
     u = User.query.first()
     if not u:
         u = User(name="Demo User", email="demo@example.com")
@@ -131,23 +137,49 @@ def logout():
 
 
 # ------------------------------------------------------------
-# 💸 Transactions (with filters)
+# 💸 Transactions CRUD (supports filters)
 # ------------------------------------------------------------
 @api_bp.route("/transactions", methods=["POST"])
 @jwt_required(optional=True)
 def add_transaction():
     data = request.json or {}
     user = get_current_user()
-    name = data.get("name", "").strip()
-    amount = float(data.get("amount", 0))
-    date_str = data.get("date")
-    date = datetime.fromisoformat(date_str).date() if date_str else datetime.utcnow().date()
-    category = data.get("category", "Uncategorized")
 
-    t = Transaction(user_id=user.id, name=name, amount=amount, date=date, category=category)
-    db.session.add(t)
+    name = data.get("name", "").strip()
+    # ensure numeric amount
+    try:
+        amount = float(data.get("amount", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid amount"}), 400
+
+    txn_type = data.get("type", "expense")  # expected 'income' or 'expense'
+    category = data.get("category", "Uncategorized")
+    date_str = data.get("date")
+    date = None
+    if date_str:
+        try:
+            date = datetime.fromisoformat(date_str).date()
+        except Exception:
+            return jsonify({"error": "Invalid date format, use ISO format (YYYY-MM-DD)"}), 400
+    else:
+        date = datetime.utcnow().date()
+
+    if not name or amount == 0:
+        return jsonify({"error": "Missing name or amount"}), 400
+
+    txn = Transaction(
+        user_id=user.id,
+        name=name,
+        amount=amount,
+        category=category,
+        # some model versions may not have `type` attribute — assuming model includes it
+        type=txn_type,
+        date=date
+    )
+    db.session.add(txn)
     db.session.commit()
-    return jsonify({"status": "ok", "transaction_id": t.id, "auto_category": category})
+
+    return jsonify({"message": "Transaction added successfully!", "id": txn.id}), 201
 
 
 @api_bp.route("/transactions", methods=["GET"])
@@ -157,6 +189,7 @@ def list_transactions():
     start = request.args.get("start")
     end = request.args.get("end")
     category = request.args.get("category")
+    txn_type = request.args.get("type")  # optional filter by type
 
     q = Transaction.query.filter(Transaction.user_id == user.id)
     if start:
@@ -165,17 +198,34 @@ def list_transactions():
         q = q.filter(Transaction.date <= end)
     if category and category.lower() != "all":
         q = q.filter(Transaction.category == category)
+    if txn_type and txn_type.lower() != "all":
+        q = q.filter(Transaction.type == txn_type)
 
-    results = q.order_by(Transaction.date.desc()).limit(500).all()
+    txs = q.order_by(Transaction.date.desc()).limit(500).all()
     return jsonify([
         {
-            "id": r.id,
-            "date": r.date.isoformat(),
-            "name": r.name,
-            "amount": float(r.amount),
-            "category": r.category,
-        } for r in results
+            "id": t.id,
+            "name": t.name,
+            "amount": float(t.amount),
+            "type": getattr(t, "type", "expense"),
+            "category": t.category,
+            "date": t.date.isoformat() if getattr(t, "date", None) else None,
+        }
+        for t in txs
     ])
+
+
+@api_bp.route("/transactions/<int:transaction_id>", methods=["DELETE"])
+@jwt_required(optional=True)
+def delete_transaction(transaction_id):
+    user = get_current_user()
+    txn = Transaction.query.filter_by(id=transaction_id, user_id=user.id).first()
+    if not txn:
+        return jsonify({"error": "Transaction not found"}), 404
+
+    db.session.delete(txn)
+    db.session.commit()
+    return jsonify({"message": "Transaction deleted successfully!"})
 
 
 # ------------------------------------------------------------
@@ -202,6 +252,35 @@ def summary():
 
 
 # ------------------------------------------------------------
+# 💰 Dashboard Summary (Income, Expense, Free Cash, Saving %)
+# ------------------------------------------------------------
+@api_bp.route("/dashboard/summary/<int:user_id>", methods=["GET"])
+@jwt_required(optional=True)
+def dashboard_summary(user_id):
+    txs = Transaction.query.filter_by(user_id=user_id).all()
+
+    if not txs:
+        return jsonify({
+            "total_income": 0,
+            "total_expense": 0,
+            "free_cash": 0,
+            "saving_percent": 0
+        })
+
+    income = sum(float(t.amount) for t in txs if getattr(t, "type", "expense") == "income")
+    expense = sum(float(t.amount) for t in txs if getattr(t, "type", "expense") == "expense")
+    free_cash = income - expense
+    saving_percent = (free_cash / income * 100) if income > 0 else 0
+
+    return jsonify({
+        "total_income": round(income, 2),
+        "total_expense": round(expense, 2),
+        "free_cash": round(free_cash, 2),
+        "saving_percent": round(saving_percent, 2)
+    })
+
+
+# ------------------------------------------------------------
 # 🎯 Goals (Add, List, Update, Delete)
 # ------------------------------------------------------------
 @api_bp.route("/goals", methods=["POST"])
@@ -213,17 +292,22 @@ def add_goal():
     if not data.get("name") or not data.get("target_amount"):
         return jsonify({"error": "Missing required fields"}), 400
 
+    try:
+        target_amount = float(data["target_amount"])
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid target_amount"}), 400
+
     goal = Goal(
         user_id=user.id,
         name=data["name"],
-        target_amount=float(data["target_amount"]),
+        target_amount=target_amount,
         duration_months=int(data.get("duration_months", 0)),
         start_date=datetime.utcnow().date(),
         saved_amount=float(data.get("saved_amount", 0.0))
     )
     db.session.add(goal)
     db.session.commit()
-    return jsonify({"status": "ok", "goal_id": goal.id})
+    return jsonify({"message": "Goal added successfully!", "goal_id": goal.id}), 201
 
 
 @api_bp.route("/goals", methods=["GET"])
@@ -253,10 +337,13 @@ def update_goal(goal_id):
         return jsonify({"error": "Goal not found"}), 404
 
     current_saved = float(goal.saved_amount or 0.0)
-    add_amount = float(data.get("saved_amount", 0.0))
+    try:
+        add_amount = float(data.get("saved_amount", 0.0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid saved_amount"}), 400
+
     goal.saved_amount = current_saved + add_amount
     db.session.commit()
-
     return jsonify({"status": "updated", "goal_id": goal.id, "saved_amount": goal.saved_amount})
 
 
@@ -274,9 +361,13 @@ def delete_goal(goal_id):
 
 
 # ------------------------------------------------------------
-# 🧠 Groq AI Utility (LLaMA)
+# 🧠 Groq AI Utility (LLaMA Tuned)
 # ------------------------------------------------------------
 def call_groq_ai(prompt, model=None):
+    """
+    Call Groq AI endpoint and return a cleaned reply dict:
+    { "reply": "..." } or { "error": "..." }
+    """
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {os.getenv('GROQ_API_KEY')}",
@@ -318,8 +409,8 @@ def call_groq_ai(prompt, model=None):
 def ai_goal_tips():
     data = request.json or {}
     user = get_current_user()
-    goal_name = data.get("goal_name")
-    target_amount = data.get("target_amount")
+    goal_name = data.get("goal_name", "Unnamed Goal")
+    target_amount = data.get("target_amount", "0")
 
     txs = Transaction.query.filter_by(user_id=user.id).all()
     category_spend = {}
@@ -349,7 +440,7 @@ def ai_goal_tips():
 @api_bp.route("/ai/chat", methods=["POST"])
 @jwt_required()
 def ai_chat():
-    data = request.json
+    data = request.json or {}
     user_message = data.get("message", "")
     user = get_current_user()
 
@@ -453,6 +544,7 @@ def ai_dashboard_insights():
 
     res = call_groq_ai(prompt)
     reply = res.get("reply", "")
+
     try:
         match = re.search(r"\{.*\}", reply, re.S)
         if match:

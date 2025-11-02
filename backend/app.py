@@ -9,6 +9,7 @@ import os
 
 migrate = Migrate()
 
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -22,11 +23,19 @@ def create_app():
     jwt.init_app(app)
     oauth.init_app(app)
 
-    # ✅ CORS setup for local React frontend
+    # ✅ CORS setup for both local & production frontends
     CORS(
         app,
         supports_credentials=True,
-        resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}},
+        resources={
+            r"/api/*": {
+                "origins": [
+                    "http://localhost:3000",
+                    "http://127.0.0.1:3000",
+                    "https://finvision-blond.vercel.app",  # ✅ Production frontend
+                ]
+            }
+        },
     )
 
     # ✅ Register API routes blueprint
@@ -52,7 +61,17 @@ def create_app():
             "jwt_token": bool(session.get("jwt_token")),
         }
 
+    # ✅ Auto-create tables if DB is empty (for Render deployment)
+    with app.app_context():
+        try:
+            from models import User, Expense, Transaction  # Adjust if more models
+            db.create_all()
+            print("✅ Database tables verified/created successfully.")
+        except Exception as e:
+            print(f"⚠️ Database initialization failed: {e}")
+
     return app
+
 
 # ✅ Create app instance for Gunicorn
 app = create_app()

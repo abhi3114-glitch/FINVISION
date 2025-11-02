@@ -24,15 +24,24 @@ export default function Sidebar({ onMobileClose }) {
   const handleNavigation = (path) => {
     router.push(path);
     if (onMobileClose && window.innerWidth < 1024) {
+      console.log("🔄 NAVIGATION - Closing sidebar");
       onMobileClose(); // Close sidebar on mobile after navigation
     }
   };
 
-  // 📱 Handle close button click
-  const handleClose = () => {
-    console.log("Close button clicked");
+  // 📱 Handle close button click - DEBUG VERSION
+  const handleClose = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("🔄 CLOSE BUTTON CLICKED - Sidebar.js");
+    console.log("onMobileClose function:", onMobileClose);
+    console.log("typeof onMobileClose:", typeof onMobileClose);
+    
     if (onMobileClose && typeof onMobileClose === 'function') {
+      console.log("✅ Calling onMobileClose()");
       onMobileClose();
+    } else {
+      console.log("❌ onMobileClose is not a function or is undefined");
     }
   };
 
@@ -48,7 +57,7 @@ export default function Sidebar({ onMobileClose }) {
   return (
     <>
       {/* 📱 Mobile Sidebar Container - FIXED Z-INDEX */}
-      <aside className="w-72 lg:w-72 h-screen fixed left-0 top-0 flex flex-col p-4 lg:p-6 border-r border-white/10 z-[60] bg-[#0b0f1a]/95 backdrop-blur-md overflow-y-auto">
+      <aside className="w-72 lg:w-72 h-screen fixed left-0 top-0 flex flex-col p-4 lg:p-6 border-r border-white/10 z-[999] bg-[#0b0f1a]/95 backdrop-blur-md overflow-y-auto">
         {/* 📱 Mobile Header with Close Button */}
         <div className="flex items-center justify-between mb-6 lg:mb-8">
           <div>
@@ -58,13 +67,13 @@ export default function Sidebar({ onMobileClose }) {
             <div className="text-xs text-gray-400 mt-1">Smart Expense Tracker</div>
           </div>
           
-          {/* 📱 Mobile Close Button - FIXED CLICK HANDLER */}
+          {/* 📱 Mobile Close Button - DEBUG VERSION */}
           <button
             onClick={handleClose}
-            className="lg:hidden bg-gray-800 hover:bg-gray-700 p-2 rounded-md border border-gray-700 transition-colors z-[70] relative"
+            className="lg:hidden bg-red-500 hover:bg-red-600 p-2 rounded-md border border-red-300 transition-colors z-[9999] relative"
             aria-label="Close menu"
           >
-            <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { API } from "../lib/api";
 import toast from "react-hot-toast";
 import AddTransactionModal from "../components/AddTransactionModal";
@@ -15,6 +15,7 @@ export default function Transactions() {
   const [range, setRange] = useState("This Month");
   const [customRange, setCustomRange] = useState({ start: "", end: "" });
   const [mounted, setMounted] = useState(false);
+  const [deleteId, setDeleteId] = useState(null); // ✅ For delete confirmation modal
 
   const categories = [
     "All",
@@ -31,7 +32,7 @@ export default function Transactions() {
 
   const ranges = ["This Month", "Last Month", "This Year", "Custom Range"];
 
-  // 📅 Helper to get start & end date for selected range
+  // 📅 Calculate start/end date for selected range
   function getDateRange() {
     const today = new Date();
     let start, end;
@@ -58,39 +59,39 @@ export default function Transactions() {
     };
   }
 
-  // 🔄 Fetch transactions with filters
+  // 🔄 Load transactions with filters
   async function loadTransactions() {
     try {
       setLoading(true);
-      const dateRange = getDateRange();
+      const { start, end } = getDateRange();
       const params = {
         ...(filter !== "All" ? { category: filter } : {}),
-        ...(dateRange.start ? { start: dateRange.start, end: dateRange.end } : {}),
+        ...(start ? { start, end } : {}),
       };
       const data = await API.get("/api/transactions", params);
       setTransactions(data);
     } catch (err) {
-      console.error(err);
+      console.error("Transaction load error:", err);
       toast.error("Failed to fetch transactions");
     } finally {
       setLoading(false);
     }
   }
 
-  // 🗑️ Delete Transaction
-  async function handleDelete(id) {
-    if (!window.confirm("Are you sure you want to delete this transaction?")) return;
+  // 🗑️ Confirm delete modal
+  async function confirmDelete() {
     try {
-      await API.delete(`/api/transactions/${id}`);
-      setTransactions((prev) => prev.filter((t) => t.id !== id));
-      toast.success("🗑️ Transaction deleted");
+      await API.delete(`/api/transactions/${deleteId}`);
+      setTransactions((prev) => prev.filter((t) => t.id !== deleteId));
+      setDeleteId(null);
+      toast.success("🗑️ Transaction deleted successfully");
     } catch (err) {
       console.error("Delete failed:", err);
       toast.error("Failed to delete transaction");
     }
   }
 
-  // 🔑 Initialize
+  // 👤 Initialize user + data
   async function initUserAndData() {
     const storedUser = API.getUser();
     if (storedUser) {
@@ -110,16 +111,13 @@ export default function Transactions() {
     if (user) loadTransactions();
   }, [filter, range, customRange]);
 
-  // ⛔️ Avoid rendering before hydration
   if (!mounted) return null;
 
   // 🚫 Not logged in
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center h-screen text-center space-y-6">
-        <h1 className="text-3xl font-semibold text-cyan-400">
-          Please Login First 💡
-        </h1>
+        <h1 className="text-3xl font-semibold text-cyan-400">Please Login First 💡</h1>
         <button
           onClick={() => API.loginWithGoogle()}
           className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold py-2 px-6 rounded-full transition-all hover:scale-105 shadow-lg"
@@ -130,7 +128,7 @@ export default function Transactions() {
     );
   }
 
-  // ✅ Main UI
+  // ✅ Main Layout
   return (
     <div className="flex w-full">
       <Sidebar />
@@ -145,7 +143,7 @@ export default function Transactions() {
           }}
         />
 
-        {/* Filter Section */}
+        {/* Filters */}
         <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
           <div className="flex items-center gap-3">
             <select
@@ -173,17 +171,13 @@ export default function Transactions() {
                 <input
                   type="date"
                   value={customRange.start}
-                  onChange={(e) =>
-                    setCustomRange({ ...customRange, start: e.target.value })
-                  }
+                  onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
                   className="bg-[#0b0e20] border border-cyan-400/30 rounded-lg px-3 py-1 text-sm text-gray-300 focus:outline-none"
                 />
                 <input
                   type="date"
                   value={customRange.end}
-                  onChange={(e) =>
-                    setCustomRange({ ...customRange, end: e.target.value })
-                  }
+                  onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
                   className="bg-[#0b0e20] border border-cyan-400/30 rounded-lg px-3 py-1 text-sm text-gray-300 focus:outline-none"
                 />
               </div>
@@ -202,9 +196,7 @@ export default function Transactions() {
         {loading ? (
           <div className="text-gray-400 text-center mt-10">Loading...</div>
         ) : transactions.length === 0 ? (
-          <div className="text-gray-400 text-center mt-10">
-            No transactions found.
-          </div>
+          <div className="text-gray-400 text-center mt-10">No transactions found.</div>
         ) : (
           <motion.div
             className="card-glow p-6 rounded-2xl"
@@ -264,17 +256,15 @@ export default function Transactions() {
                     </td>
                     <td
                       className={`text-right font-semibold ${
-                        t.type === "income"
-                          ? "text-green-400"
-                          : "text-red-400"
+                        t.type === "income" ? "text-green-400" : "text-red-400"
                       }`}
                     >
                       ₹{parseFloat(t.amount).toFixed(2)}
                     </td>
                     <td className="text-center">
                       <button
-                        onClick={() => handleDelete(t.id)}
-                        className="text-red-500 hover:text-red-700 transition"
+                        onClick={() => setDeleteId(t.id)}
+                        className="text-red-500 hover:text-red-700 transition text-lg"
                       >
                         🗑️
                       </button>
@@ -286,7 +276,7 @@ export default function Transactions() {
           </motion.div>
         )}
 
-        {/* Modal */}
+        {/* ➕ Modal */}
         {showModal && (
           <AddTransactionModal
             onClose={() => setShowModal(false)}
@@ -296,6 +286,46 @@ export default function Transactions() {
             }}
           />
         )}
+
+        {/* 🗑️ Delete Confirmation Modal */}
+        <AnimatePresence>
+          {deleteId && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-[#0e1121] p-6 rounded-2xl text-white shadow-lg w-full max-w-sm"
+              >
+                <h2 className="text-xl font-semibold text-center mb-3">
+                  Confirm Deletion
+                </h2>
+                <p className="text-gray-400 text-center mb-6">
+                  Are you sure you want to delete this transaction? This action cannot be undone.
+                </p>
+                <div className="flex justify-center gap-4">
+                  <button
+                    onClick={() => setDeleteId(null)}
+                    className="px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-gray-300 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="px-4 py-2 rounded-md bg-red-500 hover:bg-red-600 text-white font-semibold transition"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );

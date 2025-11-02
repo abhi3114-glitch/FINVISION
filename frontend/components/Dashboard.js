@@ -106,7 +106,30 @@ export default function Dashboard() {
     }
   }
 
-  // Load summary & transactions (tries dashboard summary endpoint first, fallback to /api/summary)
+  // Add this function to test your API
+  const testTransactionsAPI = async () => {
+    try {
+      console.log("🧪 Testing transactions API...");
+      const testData = await API.get("/api/transactions");
+      console.log("✅ Transactions API test:", testData);
+      
+      // Check if transactions have the correct structure
+      if (Array.isArray(testData)) {
+        testData.forEach((t, i) => {
+          console.log(`Transaction ${i}:`, {
+            name: t.name,
+            amount: t.amount,
+            type: t.type,
+            category: t.category
+          });
+        });
+      }
+    } catch (error) {
+      console.error("❌ Transactions API test failed:", error);
+    }
+  };
+
+  // Load summary & transactions - MANUAL CALCULATION (RELIABLE)
   async function loadData() {
     try {
       setLoading(true);
@@ -117,62 +140,60 @@ export default function Dashboard() {
       if (end) params.append("end", end);
       const query = params.toString() ? `?${params.toString()}` : "";
 
-      // Try dashboard summary endpoint that requires user id if available
-      let sumRes = null;
-      try {
-        if (user && user.id) {
-          // prefer the richer dashboard summary (has total_income/total_expense/free_cash/saving_percent)
-          sumRes = await API.get(`/api/dashboard/summary/${user.id}${query}`);
-        }
-      } catch (err) {
-        // ignore, will fallback
-        sumRes = null;
-      }
-
-      // fallback to generic /api/summary (returns total)
-      if (!sumRes) {
-        try {
-          const s = await API.get(`/api/summary${query}`);
-          // convert to unified shape if necessary
-          if (s && (s.total !== undefined || s.total !== null)) {
-            sumRes = {
-              total_income: (s.total_income ?? 0),
-              total_expense: (s.total_expense ?? 0),
-              free_cash: s.total ?? 0, // if only total provided, treat as free_cash fallback
-              saving_percent: (s.saving_percent ?? 0),
-            };
-          } else {
-            sumRes = {
-              total_income: s?.total_income ?? 0,
-              total_expense: s?.total_expense ?? 0,
-              free_cash: s?.free_cash ?? 0,
-              saving_percent: s?.saving_percent ?? 0,
-            };
-          }
-        } catch (err) {
-          console.warn("Summary fallback failed:", err);
-          sumRes = {
-            total_income: 0,
-            total_expense: 0,
-            free_cash: 0,
-            saving_percent: 0,
-          };
-        }
-      }
-
-      // Transactions list (filtered)
+      console.log("🔄 Loading transactions with query:", query);
+      
+      // Load transactions from API
       const txRes = await API.get(`/api/transactions${query}`);
-      setSummary({
-        total_income: sumRes.total_income ?? 0,
-        total_expense: sumRes.total_expense ?? 0,
-        free_cash: sumRes.free_cash ?? 0,
-        saving_percent: sumRes.saving_percent ?? 0,
+      const safeTransactions = Array.isArray(txRes) ? txRes : [];
+      console.log("✅ Transactions loaded:", safeTransactions);
+
+      // MANUAL CALCULATION - This will always work
+      const calculatedSummary = safeTransactions.reduce((acc, transaction) => {
+        const amount = parseFloat(transaction.amount) || 0;
+        const transactionType = transaction.type || 'expense';
+        
+        console.log(`📊 Processing: ${transaction.name} - ${transactionType} - ₹${amount}`);
+        
+        if (transactionType === 'income') {
+          acc.total_income += amount;
+        } else {
+          acc.total_expense += amount;
+        }
+        return acc;
+      }, { total_income: 0, total_expense: 0 });
+
+      // Calculate free cash and savings percentage
+      calculatedSummary.free_cash = calculatedSummary.total_income - calculatedSummary.total_expense;
+      calculatedSummary.saving_percent = calculatedSummary.total_income > 0 
+        ? Math.round((calculatedSummary.free_cash / calculatedSummary.total_income) * 100) 
+        : 0;
+
+      console.log("💰 FINAL CALCULATED SUMMARY:", {
+        income: calculatedSummary.total_income,
+        expense: calculatedSummary.total_expense,
+        free_cash: calculatedSummary.free_cash,
+        saving_percent: calculatedSummary.saving_percent
       });
-      setTransactions(Array.isArray(txRes) ? txRes : []);
+      
+      // Set the calculated summary
+      setSummary(calculatedSummary);
+      setTransactions(safeTransactions);
+      
+      // Load AI insights
       await loadAiInsights(start, end, category);
+      
     } catch (err) {
-      console.error("Dashboard load failed:", err);
+      console.error("❌ Dashboard load failed:", err);
       toast.error("Failed to load dashboard data");
+      
+      // Set empty state on error
+      setSummary({
+        total_income: 0,
+        total_expense: 0,
+        free_cash: 0,
+        saving_percent: 0,
+      });
+      setTransactions([]);
     } finally {
       setLoading(false);
     }
@@ -186,6 +207,7 @@ export default function Dashboard() {
       if (storedUser) {
         setUser(storedUser);
         await refreshUser();
+        await testTransactionsAPI(); // Test the API
         await loadData();
       } else {
         setLoading(false);

@@ -1,25 +1,43 @@
 import { motion } from "framer-motion";
 import { API } from "../lib/api";
 
-export default function Header({ subtitle, user, onMenuToggle, onLogout }) {
+export default function Header({ subtitle, user, onMenuToggle, onMenuClick, onLogout, isSidebarOpen }) {
   const handleLogout = () => {
     API.logout(); // Clears token & reloads
     if (onLogout) onLogout();
   };
 
+  // Handle menu toggle - support both prop names for backward compatibility
+  const handleMenuToggle = () => {
+    if (onMenuToggle) {
+      onMenuToggle();
+    } else if (onMenuClick) {
+      onMenuClick();
+    }
+  };
+
   return (
     <div className="flex items-center justify-between mb-6 px-2 lg:px-0">
-      {/* Left Section - Title & Mobile Menu Button */}
+      {/* Left Section - Title & Menu Toggle Button */}
       <div className="flex items-center gap-4">
-        {/* 📱 Mobile Menu Button */}
+        {/* 📱🖥️ Menu Toggle Button - Works on both mobile and desktop */}
         <button
-          onClick={onMenuToggle}
-          className="lg:hidden bg-gray-800 hover:bg-gray-700 p-2 rounded-md border border-gray-700 transition-colors"
-          aria-label="Toggle menu"
+          onClick={handleMenuToggle}
+          className="bg-gray-800 hover:bg-gray-700 active:bg-gray-600 p-2 rounded-md border border-gray-700 transition-colors touch-manipulation"
+          aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+          aria-expanded={isSidebarOpen}
         >
-          <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+          {/* Hamburger icon when closed */}
+          {!isSidebarOpen ? (
+            <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          ) : (
+            // Close/X icon when open
+            <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          )}
         </button>
 
         <div>

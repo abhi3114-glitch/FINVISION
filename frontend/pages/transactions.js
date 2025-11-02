@@ -16,7 +16,27 @@ export default function Transactions() {
   const [customRange, setCustomRange] = useState({ start: "", end: "" });
   const [mounted, setMounted] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // ✅ Fixed: Consistent state name
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Will be set based on screen size
+
+  // ✅ Set initial sidebar state based on screen size
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      let wasDesktop = window.innerWidth >= 1024;
+      setIsSidebarOpen(wasDesktop);
+      
+      const handleResize = () => {
+        const isDesktop = window.innerWidth >= 1024;
+        // Only auto-update when crossing the breakpoint
+        if (wasDesktop !== isDesktop) {
+          setIsSidebarOpen(isDesktop);
+          wasDesktop = isDesktop;
+        }
+      };
+      
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, []);
 
   const categories = [
     "All",
@@ -151,13 +171,19 @@ export default function Transactions() {
         />
       )}
       
-      {/* ✅ Sidebar with mobile responsiveness */}
+      {/* ✅ Sidebar with mobile and desktop responsiveness */}
       <div className={`
         fixed lg:static inset-y-0 left-0 z-50
-        transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 transition-transform duration-300 ease-in-out
+        transform transition-all duration-300 ease-in-out
+        ${isSidebarOpen 
+          ? 'translate-x-0 lg:translate-x-0 lg:w-72' 
+          : '-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden'
+        }
       `}>
-        <Sidebar onMobileClose={() => setIsSidebarOpen(false)} />
+        <Sidebar 
+          onMobileClose={() => setIsSidebarOpen(false)}
+          isOpen={isSidebarOpen}
+        />
       </div>
 
       {/* ✅ Main Content Area */}
@@ -169,7 +195,8 @@ export default function Transactions() {
             API.logout();
             toast.success("Logged out successfully!");
           }}
-          onMenuClick={() => setIsSidebarOpen(true)} 
+          onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+          isSidebarOpen={isSidebarOpen}
         />
 
         {/* Rest of your transactions content */}

@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { API } from "../lib/api";
 import { useState, useEffect } from "react";
 
-export default function Sidebar({ onMobileClose }) {
+export default function Sidebar({ onMobileClose, isOpen = true }) {
   const router = useRouter();
   const user = API.getUser();
   const [aiThinking, setAiThinking] = useState(false);
@@ -66,22 +66,26 @@ export default function Sidebar({ onMobileClose }) {
 
   return (
     <>
-      {/* 📱 Mobile Sidebar Container - FIXED Z-INDEX */}
-      <aside className="w-72 lg:w-72 h-screen fixed left-0 top-0 flex flex-col p-4 lg:p-6 border-r border-white/10 z-[999] bg-[#0b0f1a]/95 backdrop-blur-md overflow-y-auto">
+      {/* 📱🖥️ Sidebar Container - Responsive for mobile and desktop */}
+      <aside className={`
+        w-72 lg:w-72 h-screen fixed left-0 top-0 flex flex-col p-4 lg:p-6 border-r border-white/10 z-[999] 
+        bg-[#0b0f1a]/95 backdrop-blur-md overflow-y-auto
+        lg:relative lg:z-auto
+      `}>
         {/* 📱 Mobile Header with Close Button */}
         <div className="flex items-center justify-between mb-6 lg:mb-8">
-          <div>
+          <div className="flex-1">
             <div className="text-2xl lg:text-3xl font-semibold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 text-transparent bg-clip-text">
               FinVision
             </div>
             <div className="text-xs text-gray-400 mt-1">Smart Expense Tracker</div>
           </div>
           
-          {/* 📱 Mobile Close Button - FIXED VERSION */}
+          {/* 📱 Mobile Close Button - Only visible on mobile */}
           <button
             onClick={handleClose}
             onTouchEnd={handleClose} // Added touch support for mobile
-            className="lg:hidden bg-red-500 hover:bg-red-600 active:bg-red-700 p-2 rounded-md border border-red-300 transition-colors z-[9999] relative touch-manipulation"
+            className="lg:hidden bg-red-500 hover:bg-red-600 active:bg-red-700 p-2 rounded-md border border-red-300 transition-colors z-[9999] relative touch-manipulation ml-2"
             aria-label="Close menu"
             type="button"
           >

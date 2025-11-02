@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [showModal, setShowModal] = useState(false);
   const [user, setUser] = useState(null);
   const [mounted, setMounted] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // 📱 Mobile sidebar state
 
   // ------- AI insight state -------
   const [aiInsights, setAiInsights] = useState({
@@ -227,12 +228,12 @@ export default function Dashboard() {
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen text-center space-y-6">
-        <h1 className="text-3xl font-semibold text-cyan-400">Welcome to FinVision 💰</h1>
+      <div className="flex flex-col items-center justify-center h-screen text-center space-y-6 px-4">
+        <h1 className="text-2xl md:text-3xl font-semibold text-cyan-400">Welcome to FinVision 💰</h1>
         <p className="text-gray-400 text-sm">Login to view your AI-powered finance dashboard.</p>
         <button
           onClick={() => API.loginWithGoogle()}
-          className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold py-2 px-6 rounded-full transition-all hover:scale-105 shadow-lg"
+          className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold py-3 px-8 rounded-full transition-all hover:scale-105 shadow-lg text-base"
         >
           Login with Google
         </button>
@@ -242,8 +243,11 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen text-gray-400 text-lg">
-        Loading your dashboard...
+      <div className="flex items-center justify-center h-screen bg-[#070919] px-4">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400 text-lg">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -256,9 +260,26 @@ export default function Dashboard() {
   // ---------- Render ----------
   return (
     <div className="flex w-full">
-      <Sidebar />
+      {/* 📱 Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
+      {/* Sidebar with mobile responsiveness */}
+      <div className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0 transition-transform duration-300 ease-in-out
+      `}>
+        <Sidebar onMobileClose={() => setSidebarOpen(false)} />
+      </div>
 
-      <main className="ml-72 flex-1 p-10 relative">
+      {/* Main Content Area */}
+      <main className="flex-1 lg:ml-72 p-4 lg:p-10 relative min-h-screen">
+        {/* 📱 Mobile Header with Menu Button */}
         <Header
           subtitle="AI-driven overview of your spending, income, and savings"
           user={user}
@@ -267,126 +288,147 @@ export default function Dashboard() {
             toast.success("Logged out successfully!");
             setUser(null);
           }}
+          onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
         />
 
-        {/* Filters */}
-        <div className="flex items-center gap-4 mb-6">
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="bg-gray-800 text-gray-200 px-3 py-2 rounded-md border border-gray-700 focus:border-cyan-400"
-          >
-            <option>All</option>
-            <option>Food</option>
-            <option>Travel</option>
-            <option>Shopping</option>
-            <option>Bills</option>
-            <option>Entertainment</option>
-            <option>Salary</option>
-            <option>Others</option>
-          </select>
+        {/* 📱 Mobile-optimized Filters */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
+          {/* Mobile Filter Header */}
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <span className="text-sm text-gray-400 whitespace-nowrap">Filters:</span>
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden bg-gray-800 p-2 rounded-md border border-gray-700"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="bg-gray-800 text-gray-200 px-3 py-3 sm:py-2 rounded-md border border-gray-700 focus:border-cyan-400 text-sm w-full sm:w-auto"
+            >
+              <option>All</option>
+              <option>Food</option>
+              <option>Travel</option>
+              <option>Shopping</option>
+              <option>Bills</option>
+              <option>Entertainment</option>
+              <option>Salary</option>
+              <option>Others</option>
+            </select>
 
-          <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="bg-gray-800 text-gray-200 px-3 py-2 rounded-md border border-gray-700 focus:border-cyan-400"
-          >
-            <option value="this_month">This Month</option>
-            <option value="last_month">Last Month</option>
-            <option value="this_year">This Year</option>
-            <option value="custom">Custom Range</option>
-          </select>
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              className="bg-gray-800 text-gray-200 px-3 py-3 sm:py-2 rounded-md border border-gray-700 focus:border-cyan-400 text-sm w-full sm:w-auto"
+            >
+              <option value="this_month">This Month</option>
+              <option value="last_month">Last Month</option>
+              <option value="this_year">This Year</option>
+              <option value="custom">Custom Range</option>
+            </select>
 
-          {timeRange === "custom" && (
-            <div className="flex items-center gap-2 text-sm">
-              <input
-                type="date"
-                value={customRange.start}
-                onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
-                className="bg-gray-800 text-gray-200 px-2 py-1 rounded-md border border-gray-700"
-              />
-              <span>to</span>
-              <input
-                type="date"
-                value={customRange.end}
-                onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
-                className="bg-gray-800 text-gray-200 px-2 py-1 rounded-md border border-gray-700"
-              />
-            </div>
-          )}
+            {timeRange === "custom" && (
+              <div className="flex flex-col sm:flex-row items-center gap-2 text-sm w-full sm:w-auto">
+                <input
+                  type="date"
+                  value={customRange.start}
+                  onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
+                  className="bg-gray-800 text-gray-200 px-2 py-2 rounded-md border border-gray-700 w-full sm:w-auto"
+                />
+                <span className="hidden sm:inline">to</span>
+                <input
+                  type="date"
+                  value={customRange.end}
+                  onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
+                  className="bg-gray-800 text-gray-200 px-2 py-2 rounded-md border border-gray-700 w-full sm:w-auto"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Summary Cards */}
-        <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-4 gap-6 mb-8">
-          <Card title="Total Income" value={`₹ ${Number(summary.total_income || 0).toLocaleString()}`} color="text-green-400" />
-          <Card title="Total Expense" value={`₹ ${Number(summary.total_expense || 0).toLocaleString()}`} color="text-red-400" />
+        {/* 📱 Mobile-optimized Summary Cards */}
+        <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6">
+          <Card title="Income" value={`₹ ${Number(summary.total_income || 0).toLocaleString()}`} color="text-green-400" />
+          <Card title="Expense" value={`₹ ${Number(summary.total_expense || 0).toLocaleString()}`} color="text-red-400" />
           <Card title="Free Cash" value={`₹ ${Number(summary.free_cash || 0).toLocaleString()}`} color="text-blue-400" />
           <Card title="Saving Rate" value={`${Number(summary.saving_percent || 0)}%`} color="text-yellow-400" />
         </motion.div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-3 gap-6">
-          <motion.div variants={itemUp} className="col-span-2 card-glow p-6">
-            <h3 className="text-lg font-semibold mb-4">Spending Trend</h3>
-            <TrendChart transactions={transactions} />
+        {/* 📱 Mobile-optimized Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+          <motion.div variants={itemUp} className="lg:col-span-2 card-glow p-4 lg:p-6">
+            <h3 className="text-base lg:text-lg font-semibold mb-3 lg:mb-4">Spending Trend</h3>
+            <div className="h-64 lg:h-80">
+              <TrendChart transactions={transactions} />
+            </div>
           </motion.div>
 
-          <motion.div variants={itemUp} className="card-glow p-6">
-            <h3 className="text-lg font-semibold mb-4">Category Breakdown</h3>
-            <DonutChart transactions={transactions} />
+          <motion.div variants={itemUp} className="card-glow p-4 lg:p-6">
+            <h3 className="text-base lg:text-lg font-semibold mb-3 lg:mb-4">Category Breakdown</h3>
+            <div className="h-64 lg:h-80">
+              <DonutChart transactions={transactions} />
+            </div>
           </motion.div>
         </div>
 
-        {/* Insights (AI + Top Expense) */}
-        <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-3 gap-6 mt-8">
-          <motion.div variants={itemUp} className="card-glow p-6">
-            <h4 className="font-semibold mb-2">AI Financial Advice</h4>
-            <p className={`text-sm ${aiLoading ? "text-gray-400 italic" : "text-cyan-400"}`}>
+        {/* 📱 Mobile-optimized Insights */}
+        <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mt-6">
+          <motion.div variants={itemUp} className="card-glow p-4 lg:p-6">
+            <h4 className="font-semibold mb-2 text-sm lg:text-base">AI Financial Advice</h4>
+            <p className={`text-xs lg:text-sm ${aiLoading ? "text-gray-400 italic" : "text-cyan-400"}`}>
               {aiLoading ? "Analyzing..." : aiInsights.advice}
             </p>
           </motion.div>
 
-          <motion.div variants={itemUp} className="card-glow p-6">
-            <h4 className="font-semibold mb-2">AI Free Cash Prediction</h4>
-            <p className="text-blue-400 text-lg font-semibold">
+          <motion.div variants={itemUp} className="card-glow p-4 lg:p-6">
+            <h4 className="font-semibold mb-2 text-sm lg:text-base">AI Free Cash Prediction</h4>
+            <p className="text-blue-400 text-base lg:text-lg font-semibold">
               {aiLoading ? "..." : `₹ ${Number(aiInsights.free_cash || 0).toLocaleString()}`}
             </p>
           </motion.div>
 
-          <motion.div variants={itemUp} className="card-glow p-6">
-            <h4 className="font-semibold mb-2">AI Saving Efficiency</h4>
-            <p className="text-yellow-400 text-lg font-semibold">
+          <motion.div variants={itemUp} className="card-glow p-4 lg:p-6">
+            <h4 className="font-semibold mb-2 text-sm lg:text-base">AI Saving Efficiency</h4>
+            <p className="text-yellow-400 text-base lg:text-lg font-semibold">
               {aiLoading ? "..." : `${Number(aiInsights.savings_rate || 0)}%`}
             </p>
           </motion.div>
         </motion.div>
 
-        {/* Additional Insights row */}
-        <div className="grid grid-cols-3 gap-6 mt-6">
-          <motion.div variants={itemUp} className="card-glow p-6">
-            <h4 className="font-semibold mb-2">Top Expense</h4>
-            <div className="text-sm text-gray-300">
+        {/* 📱 Mobile-optimized Additional Insights */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mt-4 lg:mt-6">
+          <motion.div variants={itemUp} className="card-glow p-4 lg:p-6">
+            <h4 className="font-semibold mb-2 text-sm lg:text-base">Top Expense</h4>
+            <div className="text-xs lg:text-sm text-gray-300">
               {topExpense ? `${topExpense.name} • ₹${Number(topExpense.amount || 0).toLocaleString()}` : "No data"}
             </div>
           </motion.div>
 
-          <motion.div variants={itemUp} className="card-glow p-6">
-            <h4 className="font-semibold mb-2">Transactions</h4>
-            <div className="text-sm text-gray-300">{transactions.length} transactions</div>
+          <motion.div variants={itemUp} className="card-glow p-4 lg:p-6">
+            <h4 className="font-semibold mb-2 text-sm lg:text-base">Transactions</h4>
+            <div className="text-xs lg:text-sm text-gray-300">{transactions.length} transactions</div>
           </motion.div>
 
-          <motion.div variants={itemUp} className="card-glow p-6">
-            <h4 className="font-semibold mb-2">Quick Tip</h4>
-            <div className="text-sm text-gray-300">
+          <motion.div variants={itemUp} className="card-glow p-4 lg:p-6">
+            <h4 className="font-semibold mb-2 text-sm lg:text-base">Quick Tip</h4>
+            <div className="text-xs lg:text-sm text-gray-300">
               {aiLoading ? "Loading tip..." : (aiInsights.advice || "Track small spends to save big.")}
             </div>
           </motion.div>
         </div>
 
-        {/* Add Transaction FAB */}
+        {/* 📱 Mobile-optimized Add Transaction FAB */}
         <button
           onClick={() => setShowModal(true)}
-          className="fixed bottom-10 right-10 bg-cyan-500 hover:bg-cyan-600 text-black font-bold rounded-full w-14 h-14 text-3xl shadow-lg transition-all hover:scale-110"
+          className="fixed bottom-6 right-6 lg:bottom-10 lg:right-10 bg-cyan-500 hover:bg-cyan-600 text-black font-bold rounded-full w-14 h-14 lg:w-16 lg:h-16 text-2xl lg:text-3xl shadow-lg transition-all hover:scale-110 z-30 flex items-center justify-center"
+          aria-label="Add Transaction"
         >
           +
         </button>

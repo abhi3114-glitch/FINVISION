@@ -23,6 +23,7 @@ export default function Analytics() {
   const [user, setUser] = useState(null);
   const [forecast, setForecast] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // 📱 Mobile sidebar state
 
   // 🧭 Filters
   const [category, setCategory] = useState("All");
@@ -140,20 +141,23 @@ export default function Analytics() {
 
   if (loading)
     return (
-      <div className="flex h-screen items-center justify-center text-gray-400">
-        Loading Analytics...
+      <div className="flex h-screen items-center justify-center bg-[#070919] px-4">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400 text-lg">Loading Analytics...</p>
+        </div>
       </div>
     );
 
   if (!user)
     return (
-      <div className="flex flex-col items-center justify-center h-screen text-center space-y-6">
-        <h1 className="text-3xl font-semibold text-cyan-400">
+      <div className="flex flex-col items-center justify-center h-screen text-center space-y-6 px-4">
+        <h1 className="text-2xl md:text-3xl font-semibold text-cyan-400">
           Please Login First 💡
         </h1>
         <button
           onClick={() => API.loginWithGoogle()}
-          className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold py-2 px-6 rounded-full transition-all hover:scale-105 shadow-lg"
+          className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold py-3 px-8 rounded-full transition-all hover:scale-105 shadow-lg text-base"
         >
           Login with Google
         </button>
@@ -203,175 +207,231 @@ export default function Analytics() {
     border: "1px solid rgba(6,182,212,0.5)",
     borderRadius: "8px",
     color: "#e2e8f0",
-    fontSize: "13px",
-    padding: "8px 10px",
+    fontSize: "12px",
+    padding: "6px 8px",
   };
 
   return (
-    <div className="flex">
-      <Sidebar />
-      <main className="ml-72 flex-1 p-10">
+    <div className="flex w-full">
+      {/* 📱 Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
+      {/* Sidebar with mobile responsiveness */}
+      <div className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0 transition-transform duration-300 ease-in-out
+      `}>
+        <Sidebar onMobileClose={() => setSidebarOpen(false)} />
+      </div>
+
+      <main className="flex-1 lg:ml-72 p-4 lg:p-10 relative min-h-screen">
+        {/* 📱 Mobile Header with Menu Button */}
         <Header
           subtitle="Visualize your spending patterns and insights"
           user={user}
+          onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
         />
 
-        {/* 🔍 Filters */}
-        <div className="flex items-center gap-4 mb-8">
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="bg-gray-800 text-gray-200 px-3 py-2 rounded-md border border-gray-700 focus:border-cyan-400"
-          >
-            <option>All</option>
-            <option>Food</option>
-            <option>Travel</option>
-            <option>Shopping</option>
-            <option>Bills</option>
-            <option>Entertainment</option>
-            <option>Other</option>
-          </select>
+        {/* 📱 Mobile-optimized Filters */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 lg:mb-8">
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="bg-gray-800 text-gray-200 px-3 py-3 sm:py-2 rounded-md border border-gray-700 focus:border-cyan-400 text-sm w-full sm:w-auto"
+            >
+              <option>All</option>
+              <option>Food</option>
+              <option>Travel</option>
+              <option>Shopping</option>
+              <option>Bills</option>
+              <option>Entertainment</option>
+              <option>Other</option>
+            </select>
 
-          <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="bg-gray-800 text-gray-200 px-3 py-2 rounded-md border border-gray-700 focus:border-cyan-400"
-          >
-            <option value="this_month">This Month</option>
-            <option value="last_month">Last Month</option>
-            <option value="this_year">This Year</option>
-            <option value="custom">Custom Range</option>
-          </select>
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              className="bg-gray-800 text-gray-200 px-3 py-3 sm:py-2 rounded-md border border-gray-700 focus:border-cyan-400 text-sm w-full sm:w-auto"
+            >
+              <option value="this_month">This Month</option>
+              <option value="last_month">Last Month</option>
+              <option value="this_year">This Year</option>
+              <option value="custom">Custom Range</option>
+            </select>
 
-          {timeRange === "custom" && (
-            <div className="flex items-center gap-2 text-sm">
-              <input
-                type="date"
-                value={customRange.start}
-                onChange={(e) =>
-                  setCustomRange((r) => ({ ...r, start: e.target.value }))
-                }
-                className="bg-gray-800 text-gray-200 px-2 py-1 rounded-md border border-gray-700"
-              />
-              <span>to</span>
-              <input
-                type="date"
-                value={customRange.end}
-                onChange={(e) =>
-                  setCustomRange((r) => ({ ...r, end: e.target.value }))
-                }
-                className="bg-gray-800 text-gray-200 px-2 py-1 rounded-md border border-gray-700"
-              />
-            </div>
-          )}
+            {timeRange === "custom" && (
+              <div className="flex flex-col sm:flex-row items-center gap-2 text-sm w-full sm:w-auto">
+                <input
+                  type="date"
+                  value={customRange.start}
+                  onChange={(e) =>
+                    setCustomRange((r) => ({ ...r, start: e.target.value }))
+                  }
+                  className="bg-gray-800 text-gray-200 px-2 py-2 rounded-md border border-gray-700 w-full sm:w-auto text-sm"
+                />
+                <span className="hidden sm:inline text-gray-400">to</span>
+                <input
+                  type="date"
+                  value={customRange.end}
+                  onChange={(e) =>
+                    setCustomRange((r) => ({ ...r, end: e.target.value }))
+                  }
+                  className="bg-gray-800 text-gray-200 px-2 py-2 rounded-md border border-gray-700 w-full sm:w-auto text-sm"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Top Summary Cards - FIXED VERSION */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <div className="bg-[#0b0e20] p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
-            <h3 className="text-gray-400 text-sm">Total Spent</h3>
-            <p className="text-2xl font-bold text-cyan-400 mt-2">
-              ₹{safeFormatNumber(summary.total_expense || 0)}  {/* ✅ FIXED: Use total_expense */}
+        {/* 📱 Mobile-optimized Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 mb-8 lg:mb-10">
+          <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
+            <h3 className="text-gray-400 text-xs lg:text-sm">Total Spent</h3>
+            <p className="text-xl lg:text-2xl font-bold text-cyan-400 mt-1 lg:mt-2">
+              ₹{safeFormatNumber(summary.total_expense || 0)}
             </p>
           </div>
-          <div className="bg-[#0b0e20] p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
-            <h3 className="text-gray-400 text-sm">Top Category</h3>
-            <p className="text-2xl font-bold text-cyan-400 mt-2">
+          <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
+            <h3 className="text-gray-400 text-xs lg:text-sm">Top Category</h3>
+            <p className="text-xl lg:text-2xl font-bold text-cyan-400 mt-1 lg:mt-2 truncate px-2">
               {topCategory}
             </p>
           </div>
-          <div className="bg-[#0b0e20] p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
-            <h3 className="text-gray-400 text-sm">Avg per Day</h3>
-            <p className="text-2xl font-bold text-cyan-400 mt-2">
-              ₹{safeFormatNumber(avgPerDay)}  {/* ✅ FIXED: Uses expense data */}
+          <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
+            <h3 className="text-gray-400 text-xs lg:text-sm">Avg per Day</h3>
+            <p className="text-xl lg:text-2xl font-bold text-cyan-400 mt-1 lg:mt-2">
+              ₹{safeFormatNumber(avgPerDay)}
             </p>
           </div>
         </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        {/* 📱 Mobile-optimized Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
           {/* Monthly Spending */}
-          <div className="bg-[#0b0e20] p-6 rounded-2xl border border-cyan-500/20 shadow-md hover:shadow-cyan-500/10 transition-all">
-            <h3 className="text-gray-300 text-lg font-semibold mb-3">
+          <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl border border-cyan-500/20 shadow-md hover:shadow-cyan-500/10 transition-all">
+            <h3 className="text-gray-300 text-base lg:text-lg font-semibold mb-3">
               Monthly Spending
             </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={barData}>
-                <XAxis dataKey="month" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip
-                  contentStyle={tooltipStyle}
-                  cursor={{ fill: "rgba(6,182,212,0.1)" }}
-                />
-                <Bar
-                  dataKey="total"
-                  fill="#06b6d4"
-                  radius={[8, 8, 0, 0]}
-                  className="cursor-pointer"
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="h-64 lg:h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="#94a3b8" 
+                    fontSize={12}
+                    tick={{ fill: '#94a3b8' }}
+                  />
+                  <YAxis 
+                    stroke="#94a3b8" 
+                    fontSize={12}
+                    tick={{ fill: '#94a3b8' }}
+                    width={40}
+                    tickFormatter={(value) => {
+                      if (value >= 1000) return `₹${(value/1000).toFixed(0)}k`;
+                      return `₹${value}`;
+                    }}
+                  />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    cursor={{ fill: "rgba(6,182,212,0.1)" }}
+                  />
+                  <Bar
+                    dataKey="total"
+                    fill="#06b6d4"
+                    radius={[4, 4, 0, 0]}
+                    className="cursor-pointer"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
           {/* Spending by Category */}
-          <div className="bg-[#0b0e20] p-6 rounded-2xl border border-cyan-500/20 shadow-md hover:shadow-cyan-500/10 transition-all">
-            <h3 className="text-gray-300 text-lg font-semibold mb-3">
+          <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl border border-cyan-500/20 shadow-md hover:shadow-cyan-500/10 transition-all">
+            <h3 className="text-gray-300 text-base lg:text-lg font-semibold mb-3">
               Spending by Category
             </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={tooltipStyle} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="h-64 lg:h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    innerRadius={40}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Legend 
+                    wrapperStyle={{
+                      fontSize: '12px',
+                      paddingTop: '10px'
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
-        {/* 💡 FinVision AI Spending Forecast */}
-        <div className="mt-10 bg-gradient-to-br from-[#0b0e20] to-[#10142d] border border-cyan-500/20 rounded-2xl p-6 shadow-md hover:shadow-cyan-500/20 transition-all relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 blur-3xl"></div>
+        {/* 📱 Mobile-optimized AI Forecast */}
+        <div className="mt-8 lg:mt-10 bg-gradient-to-br from-[#0b0e20] to-[#10142d] border border-cyan-500/20 rounded-2xl p-4 lg:p-6 shadow-md hover:shadow-cyan-500/20 transition-all relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 blur-2xl lg:blur-3xl"></div>
           <div className="relative z-10">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-cyan-400">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+              <h3 className="text-base lg:text-lg font-semibold text-cyan-400">
                 FinVision AI Spending Forecast
               </h3>
               <button
                 onClick={loadForecast}
                 disabled={aiLoading}
-                className="bg-cyan-500 hover:bg-cyan-600 text-black text-sm font-semibold px-4 py-2 rounded-md transition-all hover:scale-105"
+                className="bg-cyan-500 hover:bg-cyan-600 text-black text-sm font-semibold px-4 py-2 rounded-md transition-all hover:scale-105 active:scale-95 w-full sm:w-auto"
               >
-                {aiLoading ? "Analyzing..." : "Recalculate"}
+                {aiLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                    Analyzing...
+                  </div>
+                ) : (
+                  "Recalculate"
+                )}
               </button>
             </div>
 
             {aiLoading ? (
-              <p className="text-gray-400 text-sm italic animate-pulse">
+              <div className="flex items-center gap-2 text-gray-400 text-sm">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
                 FinVision AI is analyzing your financial data...
-              </p>
+              </div>
             ) : forecast ? (
               <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
                 {forecast}
               </p>
             ) : (
               <p className="text-gray-400 text-sm italic">
-                No forecast available. Click "Recalculate" to generate AI
-                insights.
+                No forecast available. Click "Recalculate" to generate AI insights.
               </p>
             )}
           </div>

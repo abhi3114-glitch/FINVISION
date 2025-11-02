@@ -67,9 +67,9 @@ export default function DonutChart({ transactions = [] }) {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.6 }}
       className="relative"
-      style={{ width: "100%", height: 280 }}
+      style={{ width: "100%", height: "100%" }}
     >
-      <ResponsiveContainer>
+      <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           {/* ✨ Gradient Definitions */}
           <defs>
@@ -99,16 +99,16 @@ export default function DonutChart({ transactions = [] }) {
             </radialGradient>
           </defs>
 
-          {/* 🌀 Donut Chart */}
+          {/* 🌀 Donut Chart - Mobile Optimized */}
           <Pie
             data={data}
             dataKey="value"
             nameKey="name"
-            innerRadius={70}
-            outerRadius={100}
-            paddingAngle={5}
+            innerRadius="60%"
+            outerRadius="80%"
+            paddingAngle={2}
             isAnimationActive={true}
-            animationDuration={1000}
+            animationDuration={800}
           >
             {data.map((entry, index) => (
               <Cell
@@ -116,45 +116,49 @@ export default function DonutChart({ transactions = [] }) {
                 fill={COLORS[index % COLORS.length]}
                 stroke="none"
                 style={{
-                  filter: "drop-shadow(0 0 6px rgba(0,255,255,0.25))",
+                  filter: "drop-shadow(0 0 4px rgba(0,255,255,0.2))",
                   transition: "transform 0.2s ease",
                 }}
               />
             ))}
           </Pie>
 
-          {/* 💬 Tooltip */}
+          {/* 💬 Tooltip - Mobile Optimized */}
           <Tooltip
             formatter={(value, name) => [
               `₹${safeFormatNumber(value)} (${safeCalculatePercentage(value, total)}%)`,
               name,
             ]}
             contentStyle={{
-              backgroundColor: "rgba(11, 14, 32, 0.95)",
-              border: "1px solid rgba(6, 182, 212, 0.3)",
+              backgroundColor: "rgba(11, 14, 32, 0.98)",
+              border: "1px solid rgba(6, 182, 212, 0.4)",
               color: "#e2e8f0",
-              borderRadius: "10px",
-              fontSize: "0.85rem",
-              boxShadow: "0 0 12px rgba(0,255,255,0.2)",
-              padding: "8px 12px",
+              borderRadius: "8px",
+              fontSize: "0.75rem",
+              boxShadow: "0 0 12px rgba(0,255,255,0.3)",
+              padding: "6px 10px",
+              backdropFilter: "blur(10px)",
             }}
             itemStyle={{
               color: "#e2e8f0",
-              fontSize: "0.8rem",
+              fontSize: "0.7rem",
             }}
             labelStyle={{
               color: "#06b6d4",
               fontWeight: "bold",
-              fontSize: "0.8rem",
+              fontSize: "0.7rem",
+            }}
+            wrapperStyle={{
+              zIndex: 50
             }}
           />
         </PieChart>
       </ResponsiveContainer>
 
-      {/* 🧠 Center Label */}
+      {/* 🧠 Center Label - Mobile Optimized */}
       {data.length > 0 && (
         <motion.div
-          className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none"
+          className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.6 }}
@@ -165,7 +169,7 @@ export default function DonutChart({ transactions = [] }) {
             initial={{ scale: 0.9, opacity: 0.8 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.3 }}
-            className="text-lg font-semibold bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-400 text-transparent bg-clip-text"
+            className="text-base lg:text-lg font-semibold bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-400 text-transparent bg-clip-text break-all"
           >
             ₹{safeFormatNumber(animatedTotal)}
           </motion.div>
@@ -175,17 +179,19 @@ export default function DonutChart({ transactions = [] }) {
         </motion.div>
       )}
 
-      {/* 🌌 Empty State */}
+      {/* 🌌 Empty State - Mobile Optimized */}
       {data.length === 0 && (
         <motion.div 
-          className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 text-sm"
+          className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 px-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="text-4xl mb-2">📊</div>
-          <div>No expense data</div>
-          <div className="text-xs text-gray-600 mt-1">Add expense transactions to see breakdown</div>
+          <div className="text-2xl lg:text-4xl mb-1 lg:mb-2">📊</div>
+          <div className="text-xs lg:text-sm text-center">No expense data</div>
+          <div className="text-xs text-gray-600 mt-1 text-center hidden xs:block">
+            Add expense transactions to see breakdown
+          </div>
         </motion.div>
       )}
     </motion.div>

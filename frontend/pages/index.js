@@ -37,8 +37,13 @@ export default function Home() {
 
   if (loading)
     return (
-      <div className="h-screen flex items-center justify-center text-gray-400 text-lg">
-        Loading your dashboard...
+      <div className="h-screen flex items-center justify-center bg-[#070919]">
+        <div className="text-center">
+          {/* 📱 MOBILE-OPTIMIZED LOADING SPINNER */}
+          <div className="w-12 h-12 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400 text-lg px-4">Loading your dashboard...</p>
+          <p className="text-gray-500 text-sm mt-2 px-4">Please wait while we prepare your financial overview</p>
+        </div>
       </div>
     );
 

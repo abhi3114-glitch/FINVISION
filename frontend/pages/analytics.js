@@ -23,7 +23,7 @@ export default function Analytics() {
   const [user, setUser] = useState(null);
   const [forecast, setForecast] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // 📱 Mobile sidebar state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // ✅ Fixed: Consistent state name
 
   // 🧭 Filters
   const [category, setCategory] = useState("All");
@@ -212,231 +212,234 @@ export default function Analytics() {
   };
 
   return (
-    <div className="flex w-full">
-      {/* 📱 Mobile Sidebar Overlay */}
-      {sidebarOpen && (
+    <div className="flex min-h-screen"> {/* ✅ Fixed: Simple flex container */}
+      {/* ✅ Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => setIsSidebarOpen(false)}
         />
       )}
       
-      {/* Sidebar with mobile responsiveness */}
+      {/* ✅ Sidebar with mobile responsiveness */}
       <div className={`
         fixed lg:static inset-y-0 left-0 z-50
-        transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 transition-transform duration-300 ease-in-out
       `}>
-        <Sidebar onMobileClose={() => setSidebarOpen(false)} />
+        <Sidebar onMobileClose={() => setIsSidebarOpen(false)} />
       </div>
 
-      <main className="flex-1 lg:ml-72 p-4 lg:p-10 relative min-h-screen">
-        {/* 📱 Mobile Header with Menu Button */}
+      {/* ✅ Main Content Area */}
+      <div className="flex-1">
         <Header
           subtitle="Visualize your spending patterns and insights"
           user={user}
-          onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
+          onMenuClick={() => setIsSidebarOpen(true)} 
         />
 
-        {/* 📱 Mobile-optimized Filters */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 lg:mb-8">
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="bg-gray-800 text-gray-200 px-3 py-3 sm:py-2 rounded-md border border-gray-700 focus:border-cyan-400 text-sm w-full sm:w-auto"
-            >
-              <option>All</option>
-              <option>Food</option>
-              <option>Travel</option>
-              <option>Shopping</option>
-              <option>Bills</option>
-              <option>Entertainment</option>
-              <option>Other</option>
-            </select>
-
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
-              className="bg-gray-800 text-gray-200 px-3 py-3 sm:py-2 rounded-md border border-gray-700 focus:border-cyan-400 text-sm w-full sm:w-auto"
-            >
-              <option value="this_month">This Month</option>
-              <option value="last_month">Last Month</option>
-              <option value="this_year">This Year</option>
-              <option value="custom">Custom Range</option>
-            </select>
-
-            {timeRange === "custom" && (
-              <div className="flex flex-col sm:flex-row items-center gap-2 text-sm w-full sm:w-auto">
-                <input
-                  type="date"
-                  value={customRange.start}
-                  onChange={(e) =>
-                    setCustomRange((r) => ({ ...r, start: e.target.value }))
-                  }
-                  className="bg-gray-800 text-gray-200 px-2 py-2 rounded-md border border-gray-700 w-full sm:w-auto text-sm"
-                />
-                <span className="hidden sm:inline text-gray-400">to</span>
-                <input
-                  type="date"
-                  value={customRange.end}
-                  onChange={(e) =>
-                    setCustomRange((r) => ({ ...r, end: e.target.value }))
-                  }
-                  className="bg-gray-800 text-gray-200 px-2 py-2 rounded-md border border-gray-700 w-full sm:w-auto text-sm"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 📱 Mobile-optimized Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 mb-8 lg:mb-10">
-          <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
-            <h3 className="text-gray-400 text-xs lg:text-sm">Total Spent</h3>
-            <p className="text-xl lg:text-2xl font-bold text-cyan-400 mt-1 lg:mt-2">
-              ₹{safeFormatNumber(summary.total_expense || 0)}
-            </p>
-          </div>
-          <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
-            <h3 className="text-gray-400 text-xs lg:text-sm">Top Category</h3>
-            <p className="text-xl lg:text-2xl font-bold text-cyan-400 mt-1 lg:mt-2 truncate px-2">
-              {topCategory}
-            </p>
-          </div>
-          <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
-            <h3 className="text-gray-400 text-xs lg:text-sm">Avg per Day</h3>
-            <p className="text-xl lg:text-2xl font-bold text-cyan-400 mt-1 lg:mt-2">
-              ₹{safeFormatNumber(avgPerDay)}
-            </p>
-          </div>
-        </div>
-
-        {/* 📱 Mobile-optimized Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
-          {/* Monthly Spending */}
-          <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl border border-cyan-500/20 shadow-md hover:shadow-cyan-500/10 transition-all">
-            <h3 className="text-gray-300 text-base lg:text-lg font-semibold mb-3">
-              Monthly Spending
-            </h3>
-            <div className="h-64 lg:h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                  <XAxis 
-                    dataKey="month" 
-                    stroke="#94a3b8" 
-                    fontSize={12}
-                    tick={{ fill: '#94a3b8' }}
-                  />
-                  <YAxis 
-                    stroke="#94a3b8" 
-                    fontSize={12}
-                    tick={{ fill: '#94a3b8' }}
-                    width={40}
-                    tickFormatter={(value) => {
-                      if (value >= 1000) return `₹${(value/1000).toFixed(0)}k`;
-                      return `₹${value}`;
-                    }}
-                  />
-                  <Tooltip
-                    contentStyle={tooltipStyle}
-                    cursor={{ fill: "rgba(6,182,212,0.1)" }}
-                  />
-                  <Bar
-                    dataKey="total"
-                    fill="#06b6d4"
-                    radius={[4, 4, 0, 0]}
-                    className="cursor-pointer"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Spending by Category */}
-          <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl border border-cyan-500/20 shadow-md hover:shadow-cyan-500/10 transition-all">
-            <h3 className="text-gray-300 text-base lg:text-lg font-semibold mb-3">
-              Spending by Category
-            </h3>
-            <div className="h-64 lg:h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    innerRadius={40}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Legend 
-                    wrapperStyle={{
-                      fontSize: '12px',
-                      paddingTop: '10px'
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
-        {/* 📱 Mobile-optimized AI Forecast */}
-        <div className="mt-8 lg:mt-10 bg-gradient-to-br from-[#0b0e20] to-[#10142d] border border-cyan-500/20 rounded-2xl p-4 lg:p-6 shadow-md hover:shadow-cyan-500/20 transition-all relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 blur-2xl lg:blur-3xl"></div>
-          <div className="relative z-10">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-              <h3 className="text-base lg:text-lg font-semibold text-cyan-400">
-                FinVision AI Spending Forecast
-              </h3>
-              <button
-                onClick={loadForecast}
-                disabled={aiLoading}
-                className="bg-cyan-500 hover:bg-cyan-600 text-black text-sm font-semibold px-4 py-2 rounded-md transition-all hover:scale-105 active:scale-95 w-full sm:w-auto"
+        {/* Rest of your analytics content */}
+        <main className="p-4 lg:p-10 relative min-h-screen">
+          {/* 📱 Mobile-optimized Filters */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 lg:mb-8">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="bg-gray-800 text-gray-200 px-3 py-3 sm:py-2 rounded-md border border-gray-700 focus:border-cyan-400 text-sm w-full sm:w-auto"
               >
-                {aiLoading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                    Analyzing...
-                  </div>
-                ) : (
-                  "Recalculate"
-                )}
-              </button>
+                <option>All</option>
+                <option>Food</option>
+                <option>Travel</option>
+                <option>Shopping</option>
+                <option>Bills</option>
+                <option>Entertainment</option>
+                <option>Other</option>
+              </select>
+
+              <select
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value)}
+                className="bg-gray-800 text-gray-200 px-3 py-3 sm:py-2 rounded-md border border-gray-700 focus:border-cyan-400 text-sm w-full sm:w-auto"
+              >
+                <option value="this_month">This Month</option>
+                <option value="last_month">Last Month</option>
+                <option value="this_year">This Year</option>
+                <option value="custom">Custom Range</option>
+              </select>
+
+              {timeRange === "custom" && (
+                <div className="flex flex-col sm:flex-row items-center gap-2 text-sm w-full sm:w-auto">
+                  <input
+                    type="date"
+                    value={customRange.start}
+                    onChange={(e) =>
+                      setCustomRange((r) => ({ ...r, start: e.target.value }))
+                    }
+                    className="bg-gray-800 text-gray-200 px-2 py-2 rounded-md border border-gray-700 w-full sm:w-auto text-sm"
+                  />
+                  <span className="hidden sm:inline text-gray-400">to</span>
+                  <input
+                    type="date"
+                    value={customRange.end}
+                    onChange={(e) =>
+                      setCustomRange((r) => ({ ...r, end: e.target.value }))
+                    }
+                    className="bg-gray-800 text-gray-200 px-2 py-2 rounded-md border border-gray-700 w-full sm:w-auto text-sm"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 📱 Mobile-optimized Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 mb-8 lg:mb-10">
+            <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
+              <h3 className="text-gray-400 text-xs lg:text-sm">Total Spent</h3>
+              <p className="text-xl lg:text-2xl font-bold text-cyan-400 mt-1 lg:mt-2">
+                ₹{safeFormatNumber(summary.total_expense || 0)}
+              </p>
+            </div>
+            <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
+              <h3 className="text-gray-400 text-xs lg:text-sm">Top Category</h3>
+              <p className="text-xl lg:text-2xl font-bold text-cyan-400 mt-1 lg:mt-2 truncate px-2">
+                {topCategory}
+              </p>
+            </div>
+            <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl text-center border border-cyan-500/20 shadow-md hover:shadow-cyan-500/30 transition-all">
+              <h3 className="text-gray-400 text-xs lg:text-sm">Avg per Day</h3>
+              <p className="text-xl lg:text-2xl font-bold text-cyan-400 mt-1 lg:mt-2">
+                ₹{safeFormatNumber(avgPerDay)}
+              </p>
+            </div>
+          </div>
+
+          {/* 📱 Mobile-optimized Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
+            {/* Monthly Spending */}
+            <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl border border-cyan-500/20 shadow-md hover:shadow-cyan-500/10 transition-all">
+              <h3 className="text-gray-300 text-base lg:text-lg font-semibold mb-3">
+                Monthly Spending
+              </h3>
+              <div className="h-64 lg:h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                    <XAxis 
+                      dataKey="month" 
+                      stroke="#94a3b8" 
+                      fontSize={12}
+                      tick={{ fill: '#94a3b8' }}
+                    />
+                    <YAxis 
+                      stroke="#94a3b8" 
+                      fontSize={12}
+                      tick={{ fill: '#94a3b8' }}
+                      width={40}
+                      tickFormatter={(value) => {
+                        if (value >= 1000) return `₹${(value/1000).toFixed(0)}k`;
+                        return `₹${value}`;
+                      }}
+                    />
+                    <Tooltip
+                      contentStyle={tooltipStyle}
+                      cursor={{ fill: "rgba(6,182,212,0.1)" }}
+                    />
+                    <Bar
+                      dataKey="total"
+                      fill="#06b6d4"
+                      radius={[4, 4, 0, 0]}
+                      className="cursor-pointer"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
-            {aiLoading ? (
-              <div className="flex items-center gap-2 text-gray-400 text-sm">
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                </div>
-                FinVision AI is analyzing your financial data...
+            {/* Spending by Category */}
+            <div className="bg-[#0b0e20] p-4 lg:p-6 rounded-2xl border border-cyan-500/20 shadow-md hover:shadow-cyan-500/10 transition-all">
+              <h3 className="text-gray-300 text-base lg:text-lg font-semibold mb-3">
+                Spending by Category
+              </h3>
+              <div className="h-64 lg:h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={80}
+                      innerRadius={40}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Legend 
+                      wrapperStyle={{
+                        fontSize: '12px',
+                        paddingTop: '10px'
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
-            ) : forecast ? (
-              <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
-                {forecast}
-              </p>
-            ) : (
-              <p className="text-gray-400 text-sm italic">
-                No forecast available. Click "Recalculate" to generate AI insights.
-              </p>
-            )}
+            </div>
           </div>
-        </div>
-      </main>
+
+          {/* 📱 Mobile-optimized AI Forecast */}
+          <div className="mt-8 lg:mt-10 bg-gradient-to-br from-[#0b0e20] to-[#10142d] border border-cyan-500/20 rounded-2xl p-4 lg:p-6 shadow-md hover:shadow-cyan-500/20 transition-all relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 blur-2xl lg:blur-3xl"></div>
+            <div className="relative z-10">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <h3 className="text-base lg:text-lg font-semibold text-cyan-400">
+                  FinVision AI Spending Forecast
+                </h3>
+                <button
+                  onClick={loadForecast}
+                  disabled={aiLoading}
+                  className="bg-cyan-500 hover:bg-cyan-600 text-black text-sm font-semibold px-4 py-2 rounded-md transition-all hover:scale-105 active:scale-95 w-full sm:w-auto"
+                >
+                  {aiLoading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                      Analyzing...
+                    </div>
+                  ) : (
+                    "Recalculate"
+                  )}
+                </button>
+              </div>
+
+              {aiLoading ? (
+                <div className="flex items-center gap-2 text-gray-400 text-sm">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                  FinVision AI is analyzing your financial data...
+                </div>
+              ) : forecast ? (
+                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
+                  {forecast}
+                </p>
+              ) : (
+                <p className="text-gray-400 text-sm italic">
+                  No forecast available. Click "Recalculate" to generate AI insights.
+                </p>
+              )}
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

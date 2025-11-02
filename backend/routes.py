@@ -445,7 +445,8 @@ def ai_goal_tips():
     txs = Transaction.query.filter_by(user_id=user.id).all()
     category_spend = {}
     for t in txs:
-        category_spend[t.category] = category_spend.get(t.category, 0) + float(t.amount)
+        if getattr(t, "type", "expense") == "expense":  # ✅ Only count expenses for spending analysis
+            category_spend[t.category] = category_spend.get(t.category, 0) + float(t.amount)
 
     prompt = f"""
     You are FinVision AI — a warm and concise money coach.
@@ -477,7 +478,8 @@ def ai_chat():
     txs = Transaction.query.filter_by(user_id=user.id).all()
     summary = {}
     for t in txs:
-        summary[t.category] = summary.get(t.category, 0) + float(t.amount)
+        if getattr(t, "type", "expense") == "expense":  # ✅ Only count expenses for spending analysis
+            summary[t.category] = summary.get(t.category, 0) + float(t.amount)
 
     prompt = f"""
     You are FinVision AI — a friendly personal finance assistant.
@@ -490,7 +492,7 @@ def ai_chat():
 
 
 # ------------------------------------------------------------
-# 📈 AI Spending Forecast (with filters)
+# 📈 AI Spending Forecast (with filters) - FIXED
 # ------------------------------------------------------------
 @api_bp.route("/ai/spending_forecast", methods=["GET"])
 @jwt_required()
@@ -509,18 +511,34 @@ def ai_spending_forecast():
         q = q.filter(Transaction.category == category)
 
     txs = q.all()
-    monthly_spend = {}
+    
+    # ✅ FIXED: Separate income and expense
+    monthly_income = {}
+    monthly_expense = {}
+    
     for t in txs:
         m = t.date.strftime("%b %Y")
-        monthly_spend[m] = monthly_spend.get(m, 0) + float(t.amount)
+        amount = float(t.amount)
+        if getattr(t, "type", "expense") == "income":
+            monthly_income[m] = monthly_income.get(m, 0) + amount
+        else:
+            monthly_expense[m] = monthly_expense.get(m, 0) + amount
+
+    total_income = sum(monthly_income.values())
+    total_expense = sum(monthly_expense.values())
+    net_savings = total_income - total_expense
 
     prompt = f"""
     You are FinVision AI — a precise and friendly finance forecaster.
     Category: {category or "All"} | Range: {start or "N/A"} → {end or "Now"}
-    Monthly spending: {json.dumps(monthly_spend, indent=2)}
+    
+    💰 Income by month: {json.dumps(monthly_income, indent=2)}
+    💸 Expense by month: {json.dumps(monthly_expense, indent=2)}
+    📊 Net Savings: ₹{net_savings:.2f}
 
     ✳️ Task:
-    Predict next month’s total (₹), one reason, and one motivational line.
+    Analyze the income vs expense pattern and predict next month's financial outlook.
+    Focus on savings potential and spending habits.
     Max 3 lines.
     """
 
@@ -528,7 +546,7 @@ def ai_spending_forecast():
 
 
 # ------------------------------------------------------------
-# 🧠 AI Dashboard Insights (with filters)
+# 🧠 AI Dashboard Insights (with filters) - FIXED
 # ------------------------------------------------------------
 @api_bp.route("/ai/dashboard_insights", methods=["GET"])
 @jwt_required()
@@ -547,28 +565,39 @@ def ai_dashboard_insights():
         q = q.filter(Transaction.category == category)
 
     txs = q.all()
-    total_spent = sum(float(t.amount) for t in txs)
+    
+    # ✅ FIXED: Separate income and expense
+    total_income = sum(float(t.amount) for t in txs if getattr(t, "type", "expense") == "income")
+    total_expense = sum(float(t.amount) for t in txs if getattr(t, "type", "expense") == "expense")
+    free_cash = total_income - total_expense
+    savings_rate = (free_cash / total_income * 100) if total_income > 0 else 0
+
     monthly_spend = {}
     for t in txs:
-        m = t.date.strftime("%b %Y")
-        monthly_spend[m] = monthly_spend.get(m, 0) + float(t.amount)
+        if getattr(t, "type", "expense") == "expense":  # ✅ Only expenses for spending analysis
+            m = t.date.strftime("%b %Y")
+            monthly_spend[m] = monthly_spend.get(m, 0) + float(t.amount)
 
     prompt = f"""
     You are FinVision AI — a personal finance assistant.
     Analyze Category: {category or "All"} | Range: {start or "N/A"} → {end or "Now"}.
-    Data: {json.dumps(monthly_spend, indent=2)}.
-    Total spending: ₹{total_spent}.
+    
+    📈 Income: ₹{total_income:.2f}
+    📉 Expense: ₹{total_expense:.2f}
+    💰 Free Cash: ₹{free_cash:.2f}
+    🎯 Savings Rate: {savings_rate:.1f}%
+    Monthly Expenses: {json.dumps(monthly_spend, indent=2)}
 
     ✳️ Generate:
     - 1 short advice (<15 words)
-    - Estimated free cash left (₹)
-    - Savings rate (%)
+    - Estimated free cash left (₹) - use the actual calculated free_cash
+    - Savings rate (%) - use the actual calculated savings_rate
 
     Format JSON only:
     {{
       "advice": "text",
-      "free_cash": 3200,
-      "savings_rate": 12
+      "free_cash": {free_cash:.2f},
+      "savings_rate": {savings_rate:.1f}
     }}
     """
 
@@ -582,10 +611,11 @@ def ai_dashboard_insights():
     except Exception:
         pass
 
+    # ✅ FIXED: Return actual calculated values instead of hardcoded ones
     return jsonify({
-        "advice": "Spend wisely this week 🧠",
-        "free_cash": 3000,
-        "savings_rate": 10
+        "advice": f"Your savings rate is {savings_rate:.1f}% - {'Great job!' if savings_rate > 20 else 'Room for improvement!'}",
+        "free_cash": free_cash,
+        "savings_rate": savings_rate
     })
 
 

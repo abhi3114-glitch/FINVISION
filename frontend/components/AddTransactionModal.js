@@ -8,6 +8,7 @@ export default function AddTransactionModal({ onClose, onAdded }) {
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [category, setCategory] = useState("Others");
+  const [type, setType] = useState("expense"); // ✅ new
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const categories = [
@@ -18,6 +19,7 @@ export default function AddTransactionModal({ onClose, onAdded }) {
     "Entertainment",
     "Subscriptions",
     "Gadgets",
+    "Salary",
     "Others",
   ];
 
@@ -32,14 +34,20 @@ export default function AddTransactionModal({ onClose, onAdded }) {
         return;
       }
 
-      const res = await API.post("/api/transactions", {
+      await API.post("/api/transactions", {
         name,
         amount: parseFloat(amount),
         date,
         category,
+        type, // ✅ send to backend
       });
 
-      toast.success(`✅ Transaction added (${category})`);
+      toast.success(
+        type === "income"
+          ? `💰 Income added (${category})`
+          : `💸 Expense added (${category})`
+      );
+
       onAdded?.();
       onClose();
     } catch (err) {
@@ -98,6 +106,28 @@ export default function AddTransactionModal({ onClose, onAdded }) {
               required
             />
 
+            {/* Type Selector */}
+            <div className="flex justify-between bg-[#14182b] rounded-md p-2">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  value="expense"
+                  checked={type === "expense"}
+                  onChange={(e) => setType(e.target.value)}
+                />
+                <span className="text-sm">Expense</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  value="income"
+                  checked={type === "income"}
+                  onChange={(e) => setType(e.target.value)}
+                />
+                <span className="text-sm">Income</span>
+              </label>
+            </div>
+
             {/* Date */}
             <input
               type="date"
@@ -125,9 +155,17 @@ export default function AddTransactionModal({ onClose, onAdded }) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold rounded-md py-2 mt-2 transition-all"
+              className={`${
+                type === "income"
+                  ? "bg-green-500 hover:bg-green-600"
+                  : "bg-cyan-500 hover:bg-cyan-600"
+              } text-black font-semibold rounded-md py-2 mt-2 transition-all`}
             >
-              {isSubmitting ? "Adding..." : "Add Transaction"}
+              {isSubmitting
+                ? "Adding..."
+                : type === "income"
+                ? "Add Income"
+                : "Add Expense"}
             </button>
           </form>
         </motion.div>
